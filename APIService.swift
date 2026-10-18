@@ -148,17 +148,19 @@ class APIService: ObservableObject {
     }
     
     // MARK: - ATM Login Confirmation (Bluetooth / Code)
-    func loginToAtm(userId: Int, code: String) async throws -> String {
+    func loginToAtm(userId: Int, code: String? = nil) async throws -> String {
         guard let url = URL(string: "\(cleanBaseURL)/api/client/atm_login") else {
             throw URLError(.badURL)
         }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        let body: [String: Any] = [
-            "user_id": userId,
-            "code": code
+        var body: [String: Any] = [
+            "user_id": userId
         ]
+        if let code = code, !code.isEmpty {
+            body["code"] = code
+        }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         
         let (data, response) = try await URLSession.shared.data(for: request)
@@ -280,7 +282,7 @@ class APIService: ObservableObject {
                 }
                 // Continue listening
                 self.listenWebSocketMessages(userId: userId)
-            case .failure:
+            case .failure(_):
                 self.isConnectedToWebSocket = false
                 // Auto-reconnect after 3 seconds
                 DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
