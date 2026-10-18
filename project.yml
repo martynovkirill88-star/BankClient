@@ -1,0 +1,31 @@
+name: ClientBank
+options:
+  bundleIdPrefix: com.clientbank
+  deploymentTarget:
+    iOS: "16.0"
+targets:
+  ClientBank:
+    type: application
+    platform: iOS
+    sources:
+      - path: ClientBankApp.swift
+      - path: ContentView.swift
+      - path: Theme.swift
+      - path: Models.swift
+      - path: APIService.swift
+      - path: BluetoothManager.swift
+      - path: PinLockView.swift
+      - path: WelcomeView.swift
+      - path: DashboardView.swift
+      - path: TransferView.swift
+      - path: BluetoothAtmView.swift
+    info:
+      path: Info.plist
+      properties:
+        UILaunchScreen: {}
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.clientbank.app
+      INFOPLIST_FILE: Info.plist
+      GENERATE_INFOPLIST_FILE: NO
+      SWIFT_VERSION: "5.0"
+      CODE_SIGNING_ALLOWED: NO
