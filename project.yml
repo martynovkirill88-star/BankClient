@@ -1,6 +1,6 @@
 name: ClientBank
 options:
-  bundleIdPrefix: com.clientbank
+  bundleIdPrefix: ru.martynov
   deploymentTarget:
     iOS: "16.0"
 targets:
@@ -37,7 +37,7 @@ targets:
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
     settings:
-      PRODUCT_BUNDLE_IDENTIFIER: com.clientbank.app
+      PRODUCT_BUNDLE_IDENTIFIER: ru.martynov.clientbank
       INFOPLIST_FILE: Info.plist
       GENERATE_INFOPLIST_FILE: NO
       SWIFT_VERSION: "5.0"

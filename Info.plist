@@ -9,7 +9,7 @@
 	<key>CFBundleExecutable</key>
 	<string>ClientBank</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.clientbank.app</string>
+	<string>ru.martynov.clientbank</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
