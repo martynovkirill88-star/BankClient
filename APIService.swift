@@ -195,4 +195,42 @@ class APIService: ObservableObject {
         }
         return user
     }
+    
+    // MARK: - Attach Face Biometrics
+    func attachBiometrics(userId: Int, imageBase64: String) async throws -> (user: User, message: String) {
+        guard let url = URL(string: "\(cleanBaseURL)/api/client/attach_biometrics") else {
+            throw URLError(.badURL)
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = [
+            "user_id": userId,
+            "image_base64": imageBase64
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
+        let res = try JSONDecoder().decode(BiometricsResponse.self, from: data)
+        guard res.success, let user = res.user else {
+            throw NSError(domain: "APIService", code: 6, userInfo: [NSLocalizedDescriptionKey: res.message ?? "Не удалось привязать биометрию"])
+        }
+        return (user: user, message: res.message ?? "Биометрия успешно подключена!")
+    }
+    
+    // MARK: - Fetch Active ATM Code (Fallback/Auto-pairing)
+    func fetchActiveAtmCode() async throws -> String? {
+        guard let url = URL(string: "\(cleanBaseURL)/api/atm/active_code") else {
+            throw URLError(.badURL)
+        }
+        let (data, response) = try await URLSession.shared.data(from: url)
+        guard let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
+        let res = try JSONDecoder().decode(AtmActiveCodeResponse.self, from: data)
+        return res.code
+    }
 }

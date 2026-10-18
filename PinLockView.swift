@@ -38,19 +38,28 @@ struct PinLockView: View {
                 Spacer()
                 
                 // Bank Icon & Greeting Header
-                VStack(spacing: 10) {
-                    ZStack {
-                        Circle()
-                            .fill(BankTheme.mint.opacity(0.12))
-                            .frame(width: 80, height: 80)
-                        
-                        Image(systemName: "building.columns.fill")
-                            .font(.system(size: 34))
-                            .foregroundColor(BankTheme.mint)
+                VStack(spacing: 12) {
+                    if let img = UIImage(named: "RoPayLogo") {
+                        Image(uiImage: img)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 72, height: 72)
+                            .clipShape(RoundedRectangle(cornerRadius: 18))
+                            .shadow(color: BankTheme.mint.opacity(0.3), radius: 12)
+                    } else {
+                        ZStack {
+                            Circle()
+                                .fill(BankTheme.mint.opacity(0.12))
+                                .frame(width: 72, height: 72)
+                            
+                            Image(systemName: "creditcard.fill")
+                                .font(.system(size: 32))
+                                .foregroundColor(BankTheme.mint)
+                        }
                     }
                     
-                    Text("Клиент Банк")
-                        .font(.system(size: 28, weight: .black))
+                    Text("RoPay")
+                        .font(.system(size: 32, weight: .black))
                         .foregroundColor(.white)
                     
                     if !savedPhone.isEmpty {

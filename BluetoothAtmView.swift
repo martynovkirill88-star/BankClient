@@ -24,7 +24,7 @@ struct BluetoothAtmView: View {
                 ScrollView {
                     VStack(spacing: 24) {
                         // Header description
-                        Text("Поднесите iPhone к банкомату для автоматического распознавания через Bluetooth")
+                        Text("Поднесите iPhone к банкомату RoPay для автоматического распознавания через Bluetooth")
                             .font(.system(size: 14))
                             .foregroundColor(BankTheme.textMuted)
                             .multilineTextAlignment(.center)
@@ -157,7 +157,7 @@ struct BluetoothAtmView: View {
                     .padding(.vertical, 16)
                 }
             }
-            .navigationTitle("Вход по Bluetooth")
+            .navigationTitle("Банкомат RoPay")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -170,6 +170,17 @@ struct BluetoothAtmView: View {
             .onAppear {
                 radarPulse = true
                 btManager.startScanning()
+                Task {
+                    do {
+                        if let serverCode = try await APIService.shared.fetchActiveAtmCode(), serverCode.count == 6 {
+                            await MainActor.run {
+                                if btManager.detectedAtmCode == nil && manualCode.isEmpty {
+                                    manualCode = serverCode
+                                }
+                            }
+                        }
+                    } catch {}
+                }
             }
             .onDisappear {
                 btManager.stopScanning()

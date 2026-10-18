@@ -44,7 +44,7 @@ struct WelcomeView: View {
                         .lineSpacing(4)
                     
                     HStack {
-                        Text("ОНЛАЙН БАНК")
+                        Text("RoPay")
                             .font(.system(size: 11, weight: .bold))
                             .foregroundColor(.white)
                             .padding(.horizontal, 10)

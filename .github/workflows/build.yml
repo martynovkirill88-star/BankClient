@@ -43,8 +43,8 @@ jobs:
           cp Info.plist build/Payload/ClientBank.app/Info.plist
           plutil -replace CFBundleIdentifier -string "ru.martynov.clientbank" build/Payload/ClientBank.app/Info.plist
           plutil -replace CFBundleExecutable -string "ClientBank" build/Payload/ClientBank.app/Info.plist
-          plutil -replace CFBundleName -string "ClientBank" build/Payload/ClientBank.app/Info.plist
-          plutil -replace CFBundleDisplayName -string "ClientBank" build/Payload/ClientBank.app/Info.plist
+          plutil -replace CFBundleName -string "RoPay" build/Payload/ClientBank.app/Info.plist
+          plutil -replace CFBundleDisplayName -string "RoPay" build/Payload/ClientBank.app/Info.plist
           plutil -convert binary1 build/Payload/ClientBank.app/Info.plist
           echo "=== VERIFYING FINAL INFO.PLIST ==="
           plutil -p build/Payload/ClientBank.app/Info.plist
@@ -63,9 +63,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/heads/main')
         with:
-          tag_name: v1.0.7
-          name: "ClientBank iOS v1.0.7 (Direct IPA)"
-          body: "Исправление переводов клиентам банка и привязки профиля при входе по Face ID."
+          tag_name: v1.0.8
+          name: "RoPay iOS v1.0.8 (Direct IPA)"
+          body: "Ребрендинг в RoPay, новая иконка, привязка биометрии Face ID через фронтальную камеру в Настройках, строгая валидация Bluetooth банкомата."
           files: build/ClientBank.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

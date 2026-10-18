@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>ru</string>
 	<key>CFBundleDisplayName</key>
-	<string>ClientBank</string>
+	<string>RoPay</string>
 	<key>CFBundleExecutable</key>
 	<string>ClientBank</string>
 	<key>CFBundleIdentifier</key>
@@ -13,13 +13,13 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>ClientBank</string>
+	<string>RoPay</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0.0</string>
+	<string>1.0.8</string>
 	<key>CFBundleVersion</key>
-	<string>1</string>
+	<string>8</string>
 	<key>CFBundleSupportedPlatforms</key>
 	<array>
 		<string>iPhoneOS</string>

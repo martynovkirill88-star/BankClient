@@ -109,6 +109,14 @@ struct PhoneLookupResponse: Codable {
 }
 
 struct AtmActiveCodeResponse: Codable {
+    let has_waiting_atm: Bool?
     let code: String?
     let remaining_seconds: Double?
+}
+
+struct BiometricsResponse: Codable {
+    let success: Bool
+    let is_merged: Bool?
+    let user: User?
+    let message: String?
 }

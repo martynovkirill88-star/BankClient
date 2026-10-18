@@ -9,7 +9,13 @@ struct DashboardView: View {
     @State private var isLoadingTransactions: Bool = false
     @State private var showTransferSheet: Bool = false
     @State private var showAtmSheet: Bool = false
+    @State private var showSettingsSheet: Bool = false
     @State private var isBalanceHidden: Bool = false
+    
+    var hasFaceBiometrics: Bool {
+        guard let user = currentUser else { return false }
+        return (user.has_face == true) || (user.photo_filename != nil && !user.photo_filename!.isEmpty)
+    }
     
     var body: some View {
         NavigationStack {
@@ -35,19 +41,28 @@ struct DashboardView: View {
                                     .font(.system(size: 18, weight: .black))
                                     .foregroundColor(.white)
                                 
-                                Text("Активный счёт")
+                                Text("Активный счёт RoPay")
                                     .font(.system(size: 12))
                                     .foregroundColor(BankTheme.textMuted)
                             }
                             
                             Spacer()
                             
-                            // Refresh & Lock Buttons
+                            // Top Action Buttons: Refresh, Settings, Lock
                             HStack(spacing: 8) {
                                 Button(action: refreshData) {
                                     Image(systemName: "arrow.clockwise")
                                         .font(.system(size: 16, weight: .semibold))
                                         .foregroundColor(BankTheme.textMuted)
+                                        .padding(10)
+                                        .background(BankTheme.bgCard)
+                                        .clipShape(Circle())
+                                }
+                                
+                                Button(action: { showSettingsSheet = true }) {
+                                    Image(systemName: "gearshape.fill")
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundColor(BankTheme.mint)
                                         .padding(10)
                                         .background(BankTheme.bgCard)
                                         .clipShape(Circle())
@@ -195,6 +210,46 @@ struct DashboardView: View {
                         }
                         .padding(.horizontal, 20)
                         
+                        // Face ID Biometrics Banner
+                        Button(action: { showSettingsSheet = true }) {
+                            HStack(spacing: 14) {
+                                ZStack {
+                                    Circle()
+                                        .fill(hasFaceBiometrics ? BankTheme.mint.opacity(0.18) : BankTheme.purple.opacity(0.18))
+                                        .frame(width: 44, height: 44)
+                                    
+                                    Image(systemName: "faceid")
+                                        .font(.system(size: 20))
+                                        .foregroundColor(hasFaceBiometrics ? BankTheme.mint : BankTheme.purple)
+                                }
+                                
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(hasFaceBiometrics ? "Face ID в банкомате подключен" : "Вход по Face ID в банкомат")
+                                        .font(.system(size: 14, weight: .bold))
+                                        .foregroundColor(.white)
+                                    
+                                    Text(hasFaceBiometrics ? "Нажмите для обновления фото" : "Нажмите, чтобы сделать снимок лица")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(BankTheme.textMuted)
+                                }
+                                
+                                Spacer()
+                                
+                                Text(hasFaceBiometrics ? "Активен" : "Подключить")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundColor(hasFaceBiometrics ? BankTheme.mint : .white)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 5)
+                                    .background(hasFaceBiometrics ? BankTheme.mint.opacity(0.15) : BankTheme.purple.opacity(0.5))
+                                    .cornerRadius(10)
+                            }
+                            .padding(14)
+                            .background(BankTheme.bgCard)
+                            .cornerRadius(18)
+                            .overlay(RoundedRectangle(cornerRadius: 18).stroke(BankTheme.border, lineWidth: 1))
+                        }
+                        .padding(.horizontal, 20)
+                        
                         // Transactions Section
                         VStack(alignment: .leading, spacing: 14) {
                             Text("История операций")
@@ -277,6 +332,9 @@ struct DashboardView: View {
                 if let user = currentUser {
                     BluetoothAtmView(currentUser: user)
                 }
+            }
+            .sheet(isPresented: $showSettingsSheet) {
+                SettingsView(currentUser: $currentUser, onLogout: onLock)
             }
             .onAppear {
                 btManager.startScanning()

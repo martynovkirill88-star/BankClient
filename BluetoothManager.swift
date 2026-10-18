@@ -99,28 +99,37 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate {
         }
     }
     
+    private func isValidAtmCode(_ str: String) -> Bool {
+        let trimmed = str.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.count == 6 && trimmed.allSatisfy { $0.isNumber }
+    }
+    
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String: Any], rssi RSSI: NSNumber) {
         let rssiValue = RSSI.intValue
         currentRssi = rssiValue
         
         // Look for ATM name or advertised service data
         let name = peripheral.name ?? (advertisementData[CBAdvertisementDataLocalNameKey] as? String) ?? ""
-        
         var foundCode: String? = nil
         
-        // 1. Check if device name starts with "ATM-"
-        if name.hasPrefix("ATM-") {
-            let sub = String(name.dropFirst(4)).trimmingCharacters(in: .whitespacesAndNewlines)
-            if sub.count == 6 {
-                foundCode = sub
+        // 1. Check device name starting with "RoPay-" or "ATM-"
+        if name.hasPrefix("RoPay-") {
+            let candidate = String(name.dropFirst(6))
+            if isValidAtmCode(candidate) {
+                foundCode = candidate
+            }
+        } else if name.hasPrefix("ATM-") {
+            let candidate = String(name.dropFirst(4))
+            if isValidAtmCode(candidate) {
+                foundCode = candidate
             }
         }
         
-        // 2. Check Service Data (16-bit or 128-bit)
+        // 2. Check Service Data (UUID 0000FFF0...)
         if foundCode == nil, let serviceData = advertisementData[CBAdvertisementDataServiceDataKey] as? [CBUUID: Data] {
             for (uuid, data) in serviceData {
                 if uuid == BluetoothManager.atmServiceUUID || uuid.uuidString.contains("FFF0") {
-                    if let codeStr = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines), codeStr.count == 6 {
+                    if let codeStr = String(data: data, encoding: .utf8), isValidAtmCode(codeStr) {
                         foundCode = codeStr
                         break
                     }
@@ -128,19 +137,10 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate {
             }
         }
         
-        // 3. Check Manufacturer Data
-        if foundCode == nil, let mfgData = advertisementData[CBAdvertisementDataManufacturerDataKey] as? Data {
-            if mfgData.count >= 6, let codeStr = String(data: mfgData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines), codeStr.count == 6 {
-                foundCode = codeStr
-            } else if mfgData.count >= 8, let codeStr = String(data: mfgData.subdata(in: 2..<8), encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines), codeStr.count == 6 {
-                foundCode = codeStr
-            }
-        }
-        
-        // If we found an ATM or strong signal
-        if let code = foundCode, !code.isEmpty {
+        // If an authenticated 6-digit ATM code was discovered
+        if let code = foundCode {
             detectedAtmCode = code
-            detectedAtmName = name.isEmpty ? "Банкомат" : name
+            detectedAtmName = name.isEmpty ? "Банкомат RoPay" : name
             isAtmNearby = true
             
             // Proximity thresholds
