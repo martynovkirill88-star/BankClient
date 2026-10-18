@@ -41,6 +41,10 @@ jobs:
           cp -r build/ClientBank.xcarchive/Products/Applications/ClientBank.app build/Payload/
           # Ensure complete Info.plist with Bluetooth/FaceID privacy descriptions is injected
           cp Info.plist build/Payload/ClientBank.app/Info.plist
+          plutil -replace CFBundleIdentifier -string "ru.martynov.clientbank" build/Payload/ClientBank.app/Info.plist
+          plutil -replace CFBundleExecutable -string "ClientBank" build/Payload/ClientBank.app/Info.plist
+          plutil -replace CFBundleName -string "ClientBank" build/Payload/ClientBank.app/Info.plist
+          plutil -replace CFBundleDisplayName -string "ClientBank" build/Payload/ClientBank.app/Info.plist
           plutil -convert binary1 build/Payload/ClientBank.app/Info.plist
           echo "=== VERIFYING FINAL INFO.PLIST ==="
           plutil -p build/Payload/ClientBank.app/Info.plist
@@ -59,8 +63,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/heads/main')
         with:
-          tag_name: v1.0.4
-          name: "ClientBank iOS v1.0.4 (Direct IPA)"
+          tag_name: v1.0.5
+          name: "ClientBank iOS v1.0.5 (Direct IPA)"
           body: "Прямой файл ClientBank.ipa с фиксированным Bundle ID ru.martynov.clientbank и без шаблонных переменных."
           files: build/ClientBank.ipa
         env:
