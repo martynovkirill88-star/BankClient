@@ -59,9 +59,9 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate {
         isScanning = true
         proximityText = "Сканирование эфира..."
         
-        // Scan for ATM service or any BLE devices nearby with ATM prefix in name
+        // Scan for ALL peripherals without strict UUID filter so ATM is detected immediately
         central.scanForPeripherals(
-            withServices: [BluetoothManager.atmServiceUUID],
+            withServices: nil,
             options: [CBCentralManagerScanOptionAllowDuplicatesKey: true]
         )
     }
@@ -108,16 +108,33 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate {
         
         var foundCode: String? = nil
         
-        // Check if device name starts with "ATM-"
+        // 1. Check if device name starts with "ATM-"
         if name.hasPrefix("ATM-") {
-            foundCode = String(name.dropFirst(4))
+            let sub = String(name.dropFirst(4)).trimmingCharacters(in: .whitespacesAndNewlines)
+            if sub.count == 6 {
+                foundCode = sub
+            }
         }
         
-        // Check manufacturer data or service data
-        if foundCode == nil, let serviceData = advertisementData[CBAdvertisementDataServiceDataKey] as? [CBUUID: Data],
-           let data = serviceData[BluetoothManager.atmServiceUUID],
-           let codeStr = String(data: data, encoding: .utf8) {
-            foundCode = codeStr
+        // 2. Check Service Data (16-bit or 128-bit)
+        if foundCode == nil, let serviceData = advertisementData[CBAdvertisementDataServiceDataKey] as? [CBUUID: Data] {
+            for (uuid, data) in serviceData {
+                if uuid == BluetoothManager.atmServiceUUID || uuid.uuidString.contains("FFF0") {
+                    if let codeStr = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines), codeStr.count == 6 {
+                        foundCode = codeStr
+                        break
+                    }
+                }
+            }
+        }
+        
+        // 3. Check Manufacturer Data
+        if foundCode == nil, let mfgData = advertisementData[CBAdvertisementDataManufacturerDataKey] as? Data {
+            if mfgData.count >= 6, let codeStr = String(data: mfgData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines), codeStr.count == 6 {
+                foundCode = codeStr
+            } else if mfgData.count >= 8, let codeStr = String(data: mfgData.subdata(in: 2..<8), encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines), codeStr.count == 6 {
+                foundCode = codeStr
+            }
         }
         
         // If we found an ATM or strong signal
@@ -127,14 +144,14 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate {
             isAtmNearby = true
             
             // Proximity thresholds
-            if rssiValue > -65 {
-                proximityText = "Банкомат вплотную! (\(rssiValue) dBm)"
+            if rssiValue > -70 {
+                proximityText = "Банкомат рядом! (\(rssiValue) dBm)"
                 if !hasTriggeredHaptic {
                     hasTriggeredHaptic = true
                     let generator = UIImpactFeedbackGenerator(style: .heavy)
                     generator.impactOccurred()
                 }
-            } else if rssiValue > -80 {
+            } else if rssiValue > -85 {
                 proximityText = "Рядом с банкоматом (\(rssiValue) dBm)"
             } else {
                 proximityText = "Банкомат в зоне видимости (\(rssiValue) dBm)"
