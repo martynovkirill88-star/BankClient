@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 import LocalAuthentication
 
 struct BluetoothAtmView: View {
@@ -11,9 +12,17 @@ struct BluetoothAtmView: View {
     @State private var alertMessage: String = ""
     @State private var showAlert: Bool = false
     @State private var radarPulse: Bool = false
+    private let pollTimer = Timer.publish(every: 1.5, on: .main, in: .common).autoconnect()
     
     var activeCode: String {
         btManager.detectedAtmCode ?? manualCode
+    }
+    
+    var canConfirm: Bool {
+        if !manualCode.isEmpty && manualCode.count == 6 {
+            return true
+        }
+        return !activeCode.isEmpty && btManager.isVeryClose
     }
     
     var body: some View {
@@ -68,7 +77,7 @@ struct BluetoothAtmView: View {
                         // Live Status Pill
                         HStack(spacing: 8) {
                             Circle()
-                                .fill(btManager.isAtmNearby ? BankTheme.mint : (btManager.isScanning ? Color.yellow : Color.gray))
+                                .fill(btManager.isAtmNearby ? (btManager.isVeryClose ? BankTheme.mint : Color.yellow) : (btManager.isScanning ? Color.yellow : Color.gray))
                                 .frame(width: 10, height: 10)
                             
                             Text(btManager.proximityText)
@@ -89,14 +98,14 @@ struct BluetoothAtmView: View {
                                 
                                 Text(formatCode(detected))
                                     .font(.system(size: 32, weight: .black, design: .monospaced))
-                                    .foregroundColor(BankTheme.mint)
+                                    .foregroundColor(btManager.isVeryClose ? BankTheme.mint : Color.yellow)
                                     .tracking(6)
                             }
                             .padding()
                             .frame(maxWidth: .infinity)
                             .background(BankTheme.mint.opacity(0.08))
                             .cornerRadius(16)
-                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(BankTheme.mint, lineWidth: 1.5))
+                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(btManager.isVeryClose ? BankTheme.mint : Color.yellow.opacity(0.5), lineWidth: 1.5))
                             .padding(.horizontal, 20)
                         } else {
                             // Manual Code Entry Fallback
@@ -124,21 +133,29 @@ struct BluetoothAtmView: View {
                                 ProgressView().tint(.white)
                             } else {
                                 HStack(spacing: 10) {
-                                    Image(systemName: "bolt.fill")
-                                    Text("Подтвердить вход в банкомате")
-                                        .font(.system(size: 16, weight: .bold))
+                                    if canConfirm {
+                                        Image(systemName: "bolt.fill")
+                                        Text("Подтвердить вход в банкомате")
+                                    } else if btManager.isAtmNearby {
+                                        Image(systemName: "hand.tap.fill")
+                                        Text("Поднесите телефон вплотную")
+                                    } else {
+                                        Image(systemName: "wave.3.forward")
+                                        Text("Поиск банкомата RoPay...")
+                                    }
                                 }
-                                .foregroundColor(.white)
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(canConfirm ? .white : BankTheme.textMuted)
                             }
                         }
                         .frame(maxWidth: .infinity)
                         .padding()
                         .background(
-                            activeCode.isEmpty ? AnyShapeStyle(Color.gray.opacity(0.3)) : AnyShapeStyle(BankTheme.purpleGradient)
+                            canConfirm ? AnyShapeStyle(BankTheme.purpleGradient) : AnyShapeStyle(Color.gray.opacity(0.2))
                         )
                         .cornerRadius(16)
                         .padding(.horizontal, 20)
-                        .disabled(activeCode.isEmpty || isLoading)
+                        .disabled(!canConfirm || isLoading)
                         
                         // Rescan Button
                         Button(action: {
@@ -167,6 +184,20 @@ struct BluetoothAtmView: View {
                     .foregroundColor(BankTheme.mint)
                 }
             }
+            .onReceive(pollTimer) { _ in
+                btManager.restartScanIfNeeded()
+                Task {
+                    do {
+                        if let serverCode = try await APIService.shared.fetchActiveAtmCode(), serverCode.count == 6 {
+                            await MainActor.run {
+                                if btManager.isAtmNearby && btManager.detectedAtmCode == nil {
+                                    btManager.detectedAtmCode = serverCode
+                                }
+                            }
+                        }
+                    } catch {}
+                }
+            }
             .onAppear {
                 radarPulse = true
                 btManager.startScanning()
@@ -174,8 +205,8 @@ struct BluetoothAtmView: View {
                     do {
                         if let serverCode = try await APIService.shared.fetchActiveAtmCode(), serverCode.count == 6 {
                             await MainActor.run {
-                                if btManager.detectedAtmCode == nil && manualCode.isEmpty {
-                                    manualCode = serverCode
+                                if btManager.isAtmNearby && btManager.detectedAtmCode == nil {
+                                    btManager.detectedAtmCode = serverCode
                                 }
                             }
                         }

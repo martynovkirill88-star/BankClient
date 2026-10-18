@@ -29,8 +29,8 @@ targets:
         CFBundleName: "RoPay"
         CFBundleExecutable: "ClientBank"
         CFBundleIdentifier: "ru.martynov.clientbank"
-        CFBundleShortVersionString: "1.0.8"
-        CFBundleVersion: "8"
+        CFBundleShortVersionString: "1.0.9"
+        CFBundleVersion: "9"
         UILaunchScreen: {}
         LSRequiresIPhoneOS: true
         UIUserInterfaceStyle: "Dark"

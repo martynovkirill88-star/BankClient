@@ -39,13 +39,16 @@ jobs:
         run: |
           mkdir -p build/Payload
           cp -r build/ClientBank.xcarchive/Products/Applications/ClientBank.app build/Payload/
-          # Ensure complete Info.plist with Bluetooth/FaceID privacy descriptions is injected
+          # Ensure complete Info.plist with Bluetooth/FaceID privacy descriptions and CFBundleIcons is injected
           cp Info.plist build/Payload/ClientBank.app/Info.plist
           plutil -replace CFBundleIdentifier -string "ru.martynov.clientbank" build/Payload/ClientBank.app/Info.plist
           plutil -replace CFBundleExecutable -string "ClientBank" build/Payload/ClientBank.app/Info.plist
           plutil -replace CFBundleName -string "RoPay" build/Payload/ClientBank.app/Info.plist
           plutil -replace CFBundleDisplayName -string "RoPay" build/Payload/ClientBank.app/Info.plist
           plutil -convert binary1 build/Payload/ClientBank.app/Info.plist
+          # Copy loose app icon files so SpringBoard / sideloaders immediately load them
+          cp AppIcon*.png build/Payload/ClientBank.app/ || true
+          cp Icon*.png build/Payload/ClientBank.app/ || true
           echo "=== VERIFYING FINAL INFO.PLIST ==="
           plutil -p build/Payload/ClientBank.app/Info.plist
           cd build
@@ -63,9 +66,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/heads/main')
         with:
-          tag_name: v1.0.8
-          name: "RoPay iOS v1.0.8 (Direct IPA)"
-          body: "Ребрендинг в RoPay, новая иконка, привязка биометрии Face ID через фронтальную камеру в Настройках, строгая валидация Bluetooth банкомата."
+          tag_name: v1.0.9
+          name: "RoPay iOS v1.0.9 (Direct IPA)"
+          body: "RoPay v1.0.9: Полное исправление иконки приложения для iOS / AltStore, моментальное обнаружение банкомата при любом порядке входа, строгое требование поднесения вплотную к экрану (<=15 см)."
           files: build/ClientBank.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

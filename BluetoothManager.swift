@@ -12,6 +12,7 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate {
     @Published var isBluetoothEnabled: Bool = false
     @Published var isScanning: Bool = false
     @Published var isAtmNearby: Bool = false
+    @Published var isVeryClose: Bool = false
     @Published var detectedAtmCode: String? = nil
     @Published var detectedAtmName: String = ""
     @Published var currentRssi: Int = -100
@@ -66,6 +67,21 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate {
         )
     }
     
+    private var lastRestartTime: Date = Date()
+    
+    func restartScanIfNeeded() {
+        guard centralManager?.state == .poweredOn else { return }
+        // If not discovered yet or searching, refresh scan every 2.5 seconds to bust CoreBluetooth scan throttling
+        if !isAtmNearby && Date().timeIntervalSince(lastRestartTime) > 2.5 {
+            lastRestartTime = Date()
+            centralManager?.stopScan()
+            centralManager?.scanForPeripherals(
+                withServices: nil,
+                options: [CBCentralManagerScanOptionAllowDuplicatesKey: true]
+            )
+        }
+    }
+    
     func stopScanning() {
         centralManager?.stopScan()
         isScanning = false
@@ -73,10 +89,12 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate {
     
     func resetDetection() {
         isAtmNearby = false
+        isVeryClose = false
         detectedAtmCode = nil
         detectedAtmName = ""
         currentRssi = -100
         hasTriggeredHaptic = false
+        lastRestartTime = Date()
         proximityText = "Ожидание банкомата..."
     }
     
@@ -100,7 +118,7 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate {
     }
     
     private func isValidAtmCode(_ str: String) -> Bool {
-        let trimmed = str.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = str.trimmingCharacters(in: .whitespacesAndNewlines.union(.controlCharacters))
         return trimmed.count == 6 && trimmed.allSatisfy { $0.isNumber }
     }
     
@@ -129,7 +147,7 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate {
         if foundCode == nil, let serviceData = advertisementData[CBAdvertisementDataServiceDataKey] as? [CBUUID: Data] {
             for (uuid, data) in serviceData {
                 if uuid == BluetoothManager.atmServiceUUID || uuid.uuidString.contains("FFF0") {
-                    if let codeStr = String(data: data, encoding: .utf8), isValidAtmCode(codeStr) {
+                    if let codeStr = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines.union(.controlCharacters)), isValidAtmCode(codeStr) {
                         foundCode = codeStr
                         break
                     }
@@ -137,24 +155,41 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate {
             }
         }
         
-        // If an authenticated 6-digit ATM code was discovered
-        if let code = foundCode {
-            detectedAtmCode = code
+        // 3. Check Service UUIDs (UUID 0000FFF0...) or prefix
+        var isAtmDevice = (foundCode != nil)
+        if !isAtmDevice, let serviceUUIDs = advertisementData[CBAdvertisementDataServiceUUIDsKey] as? [CBUUID] {
+            for uuid in serviceUUIDs {
+                if uuid == BluetoothManager.atmServiceUUID || uuid.uuidString.contains("FFF0") {
+                    isAtmDevice = true
+                    break
+                }
+            }
+        }
+        if !isAtmDevice && (name.hasPrefix("RoPay") || name.hasPrefix("ATM")) {
+            isAtmDevice = true
+        }
+        
+        // If an authenticated 6-digit ATM code was discovered or ATM peripheral identified
+        if isAtmDevice {
+            if let code = foundCode {
+                detectedAtmCode = code
+            }
             detectedAtmName = name.isEmpty ? "Банкомат RoPay" : name
             isAtmNearby = true
             
-            // Proximity thresholds
-            if rssiValue > -70 {
+            // Strict proximity requirement: very close to tablet (<= 15cm is RSSI >= -58 dBm)
+            if rssiValue >= -58 {
+                isVeryClose = true
                 proximityText = "Банкомат рядом! (\(rssiValue) dBm)"
                 if !hasTriggeredHaptic {
                     hasTriggeredHaptic = true
                     let generator = UIImpactFeedbackGenerator(style: .heavy)
                     generator.impactOccurred()
                 }
-            } else if rssiValue > -85 {
-                proximityText = "Рядом с банкоматом (\(rssiValue) dBm)"
             } else {
-                proximityText = "Банкомат в зоне видимости (\(rssiValue) dBm)"
+                isVeryClose = false
+                hasTriggeredHaptic = false
+                proximityText = "Поднесите iPhone вплотную к экрану (\(rssiValue) dBm)"
             }
         }
     }
