@@ -22,13 +22,37 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate {
     
     override init() {
         super.init()
-        centralManager = CBCentralManager(delegate: self, queue: .main)
+        // Do not block init, lazily instantiate when needed or initialize safely
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.setupCentralManager()
+        }
+    }
+    
+    private func setupCentralManager() {
+        guard centralManager == nil else { return }
+        centralManager = CBCentralManager(delegate: self, queue: .main, options: [
+            CBCentralManagerOptionShowPowerAlertKey: false
+        ])
     }
     
     func startScanning() {
-        guard let central = centralManager, central.state == .poweredOn else {
+        if centralManager == nil {
+            setupCentralManager()
+        }
+        
+        guard let central = centralManager else { return }
+        
+        guard central.state == .poweredOn else {
             isScanning = false
-            proximityText = "Включите Bluetooth"
+            switch central.state {
+            case .poweredOff:
+                proximityText = "Включите Bluetooth на телефоне"
+            case .unauthorized:
+                proximityText = "Нет доступа к Bluetooth (разрешите в Настройках)"
+            default:
+                proximityText = "Ожидание запуска Bluetooth..."
+            }
             return
         }
         
@@ -80,7 +104,7 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate {
         currentRssi = rssiValue
         
         // Look for ATM name or advertised service data
-        var name = peripheral.name ?? (advertisementData[CBAdvertisementDataLocalNameKey] as? String) ?? ""
+        let name = peripheral.name ?? (advertisementData[CBAdvertisementDataLocalNameKey] as? String) ?? ""
         
         var foundCode: String? = nil
         

@@ -22,10 +22,28 @@ targets:
     info:
       path: Info.plist
       properties:
+        CFBundleDisplayName: "Клиент Банк"
+        CFBundleShortVersionString: "1.0.0"
+        CFBundleVersion: "1"
         UILaunchScreen: {}
+        LSRequiresIPhoneOS: true
+        UIUserInterfaceStyle: "Dark"
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        NSBluetoothAlwaysUsageDescription: "Приложение использует Bluetooth для бесконтактного обнаружения банкомата и быстрого входа."
+        NSBluetoothPeripheralUsageDescription: "Приложение использует Bluetooth для связи с банкоматом."
+        NSFaceIDUsageDescription: "Используется для быстрого и безопасного входа в банк по Face ID."
+        NSCameraUsageDescription: "Используется для биометрической верификации лица."
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.clientbank.app
       INFOPLIST_FILE: Info.plist
       GENERATE_INFOPLIST_FILE: NO
       SWIFT_VERSION: "5.0"
       CODE_SIGNING_ALLOWED: NO
+      INFOPLIST_KEY_CFBundleDisplayName: "Клиент Банк"
+      INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription: "Приложение использует Bluetooth для бесконтактного обнаружения банкомата и быстрого входа."
+      INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription: "Приложение использует Bluetooth для связи с банкоматом."
+      INFOPLIST_KEY_NSFaceIDUsageDescription: "Используется для быстрого и безопасного входа в банк по Face ID."
+      INFOPLIST_KEY_NSCameraUsageDescription: "Используется для биометрической верификации лица."

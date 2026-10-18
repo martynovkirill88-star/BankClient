@@ -7,29 +7,35 @@
 	<key>CFBundleDisplayName</key>
 	<string>Клиент Банк</string>
 	<key>CFBundleExecutable</key>
-	<string>$(EXECUTABLE_NAME)</string>
+	<string>ClientBank</string>
 	<key>CFBundleIdentifier</key>
-	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<string>com.clientbank.app</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>$(PRODUCT_NAME)</string>
+	<string>ClientBank</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>1.0.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<key>CFBundleSupportedPlatforms</key>
+	<array>
+		<string>iPhoneOS</string>
+	</array>
+	<key>MinimumOSVersion</key>
+	<string>16.0</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>Приложение использует Bluetooth для обнаружения банкомата поблизости и бесконтактного входа.</string>
+	<string>Приложение использует Bluetooth для бесконтактного обнаружения банкомата и быстрого входа.</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>
-	<string>Используется для передачи сигнала подтверждения на банкомат.</string>
+	<string>Приложение использует Bluetooth для связи с банкоматом.</string>
 	<key>NSFaceIDUsageDescription</key>
-	<string>Используется для входа в банк по Face ID и подтверждения операций.</string>
+	<string>Используется для быстрого и безопасного входа в банк по Face ID.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Используется для биометрической верификации.</string>
+	<string>Используется для биометрической верификации лица.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
@@ -39,7 +45,7 @@
 	<dict/>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
-		<string>armv7</string>
+		<string>arm64</string>
 	</array>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
