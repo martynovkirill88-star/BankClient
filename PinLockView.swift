@@ -256,29 +256,19 @@ struct PinLockView: View {
                 DispatchQueue.main.async {
                     if success {
                         UINotificationFeedbackGenerator().notificationOccurred(.success)
-                        // If phone is saved, fetch latest profile directly
+                        // If phone is saved, fetch latest real profile directly
                         if !savedPhone.isEmpty {
                             Task {
                                 do {
-                                    // Use lookup or login
-                                    let lookup = try await APIService.shared.lookupPhone(phone: savedPhone)
-                                    if lookup.found {
-                                        // Auto-login with cached user
-                                        let dummyUser = User(
-                                            id: 1,
-                                            name: lookup.display_name?.components(separatedBy: " ").first ?? "Клиент",
-                                            surname: "",
-                                            phone: savedPhone,
-                                            balance: 1000.0,
-                                            photo_filename: nil,
-                                            has_face: true,
-                                            created_at: nil
-                                        )
-                                        currentUser = dummyUser
+                                    let user = try await APIService.shared.fetchUserByPhone(phone: savedPhone)
+                                    await MainActor.run {
+                                        currentUser = user
                                         showWelcomeScreen = true
                                     }
                                 } catch {
-                                    errorMessage = "Не удалось подтвердить вход"
+                                    await MainActor.run {
+                                        errorMessage = "Не удалось загрузить профиль (\(error.localizedDescription))"
+                                    }
                                 }
                             }
                         } else {

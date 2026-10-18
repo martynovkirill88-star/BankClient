@@ -95,6 +95,19 @@ class APIService: ObservableObject {
         return try JSONDecoder().decode(PhoneLookupResponse.self, from: data)
     }
     
+    // MARK: - Fetch User By Phone
+    func fetchUserByPhone(phone: String) async throws -> User {
+        guard let encodedPhone = phone.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let url = URL(string: "\(cleanBaseURL)/api/client/by_phone?phone=\(encodedPhone)") else {
+            throw URLError(.badURL)
+        }
+        let (data, response) = try await URLSession.shared.data(from: url)
+        guard let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
+        return try JSONDecoder().decode(User.self, from: data)
+    }
+
     // MARK: - Transfer Funds
     func transferFunds(senderId: Int, recipientPhone: String, amount: Double) async throws -> Double {
         guard let url = URL(string: "\(cleanBaseURL)/api/client/transfer") else {
@@ -104,6 +117,7 @@ class APIService: ObservableObject {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         let body: [String: Any] = [
+            "sender_id": senderId,
             "sender_user_id": senderId,
             "recipient_phone": recipientPhone,
             "amount": amount

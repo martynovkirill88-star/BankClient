@@ -63,9 +63,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/heads/main')
         with:
-          tag_name: v1.0.6
-          name: "ClientBank iOS v1.0.6 (Direct IPA)"
-          body: "Обновление с мгновенным обнаружением банкомата по Bluetooth LE (расширенное сканирование эфира и поддержка пакетов ATM-XXXXXX)."
+          tag_name: v1.0.7
+          name: "ClientBank iOS v1.0.7 (Direct IPA)"
+          body: "Исправление переводов клиентам банка и привязки профиля при входе по Face ID."
           files: build/ClientBank.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
