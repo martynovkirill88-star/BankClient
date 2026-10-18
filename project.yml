@@ -24,24 +24,6 @@ targets:
       - path: RoPayLogo.png
     info:
       path: Info.plist
-      properties:
-        CFBundleDisplayName: "RoPay"
-        CFBundleName: "RoPay"
-        CFBundleExecutable: "ClientBank"
-        CFBundleIdentifier: "ru.martynov.clientbank"
-        CFBundleShortVersionString: "1.0.9"
-        CFBundleVersion: "9"
-        UILaunchScreen: {}
-        LSRequiresIPhoneOS: true
-        UIUserInterfaceStyle: "Dark"
-        UISupportedInterfaceOrientations:
-          - UIInterfaceOrientationPortrait
-        NSBluetoothAlwaysUsageDescription: "Приложение использует Bluetooth для бесконтактного обнаружения банкомата и быстрого входа."
-        NSBluetoothPeripheralUsageDescription: "Приложение использует Bluetooth для связи с банкоматом."
-        NSFaceIDUsageDescription: "Используется для быстрого и безопасного входа в банк по Face ID."
-        NSCameraUsageDescription: "Используется для биометрической верификации лица и Face ID."
-        NSAppTransportSecurity:
-          NSAllowsArbitraryLoads: true
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: ru.martynov.clientbank
       INFOPLIST_FILE: Info.plist
