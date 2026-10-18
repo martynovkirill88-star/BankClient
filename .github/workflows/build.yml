@@ -59,9 +59,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/heads/main')
         with:
-          tag_name: v1.0.1
-          name: "ClientBank iOS v1.0.1 (Direct IPA)"
-          body: "Прямой файл ClientBank.ipa без вложенного ZIP-архива. Можно скачивать прямо на iPhone для AltStore / Sideloadly."
+          tag_name: v1.0.2
+          name: "ClientBank iOS v1.0.2 (Direct IPA)"
+          body: "Прямой файл ClientBank.ipa без вложенного ZIP-архива. Полная поддержка AltStore и Sideloadly."
           files: build/ClientBank.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

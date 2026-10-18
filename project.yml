@@ -22,7 +22,7 @@ targets:
     info:
       path: Info.plist
       properties:
-        CFBundleDisplayName: "Клиент Банк"
+        CFBundleDisplayName: "ClientBank"
         CFBundleShortVersionString: "1.0.0"
         CFBundleVersion: "1"
         UILaunchScreen: {}
@@ -42,7 +42,7 @@ targets:
       GENERATE_INFOPLIST_FILE: NO
       SWIFT_VERSION: "5.0"
       CODE_SIGNING_ALLOWED: NO
-      INFOPLIST_KEY_CFBundleDisplayName: "Клиент Банк"
+      INFOPLIST_KEY_CFBundleDisplayName: "ClientBank"
       INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription: "Приложение использует Bluetooth для бесконтактного обнаружения банкомата и быстрого входа."
       INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription: "Приложение использует Bluetooth для связи с банкоматом."
       INFOPLIST_KEY_NSFaceIDUsageDescription: "Используется для быстрого и безопасного входа в банк по Face ID."

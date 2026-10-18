@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>ru</string>
 	<key>CFBundleDisplayName</key>
-	<string>Клиент Банк</string>
+	<string>ClientBank</string>
 	<key>CFBundleExecutable</key>
 	<string>ClientBank</string>
 	<key>CFBundleIdentifier</key>
