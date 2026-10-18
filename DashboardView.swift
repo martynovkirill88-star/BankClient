@@ -337,8 +337,15 @@ struct DashboardView: View {
                 SettingsView(currentUser: $currentUser, onLogout: onLock)
             }
             .onAppear {
+                NotificationManager.shared.requestPermission()
+                if let user = currentUser {
+                    APIService.shared.startTransactionNotifications(userId: user.id)
+                }
                 btManager.startScanning()
                 loadTransactions()
+            }
+            .onDisappear {
+                APIService.shared.stopTransactionNotifications()
             }
         }
     }

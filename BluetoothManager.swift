@@ -3,7 +3,7 @@ import CoreBluetooth
 import UIKit
 import Combine
 
-class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate {
+class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate, CBPeripheralManagerDelegate {
     static let shared = BluetoothManager()
     
     // Custom ATM Service UUID
@@ -11,6 +11,7 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate {
     
     @Published var isBluetoothEnabled: Bool = false
     @Published var isScanning: Bool = false
+    @Published var isAdvertising: Bool = false
     @Published var isAtmNearby: Bool = false
     @Published var isVeryClose: Bool = false
     @Published var detectedAtmCode: String? = nil
@@ -19,14 +20,17 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate {
     @Published var proximityText: String = "Поиск банкомата..."
     
     private var centralManager: CBCentralManager?
+    private var peripheralManager: CBPeripheralManager?
+    private var currentUserIdToAdvertise: Int? = nil
     private var hasTriggeredHaptic: Bool = false
+    private var lastRestartTime: Date = Date()
     
     override init() {
         super.init()
-        // Do not block init, lazily instantiate when needed or initialize safely
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             self.setupCentralManager()
+            self.setupPeripheralManager()
         }
     }
     
@@ -37,6 +41,38 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate {
         ])
     }
     
+    private func setupPeripheralManager() {
+        guard peripheralManager == nil else { return }
+        peripheralManager = CBPeripheralManager(delegate: self, queue: .main)
+    }
+    
+    // MARK: - BLE Beacon Advertising (iPhone -> Tablet)
+    func startAdvertising(userId: Int) {
+        currentUserIdToAdvertise = userId
+        if peripheralManager == nil {
+            setupPeripheralManager()
+        } else if peripheralManager?.state == .poweredOn {
+            actuallyStartAdvertising(userId: userId)
+        }
+    }
+    
+    private func actuallyStartAdvertising(userId: Int) {
+        guard peripheralManager?.state == .poweredOn else { return }
+        let advData: [String: Any] = [
+            CBAdvertisementDataServiceUUIDsKey: [BluetoothManager.atmServiceUUID],
+            CBAdvertisementDataLocalNameKey: "RoPay-Client-\(userId)"
+        ]
+        peripheralManager?.stopAdvertising()
+        peripheralManager?.startAdvertising(advData)
+        isAdvertising = true
+    }
+    
+    func stopAdvertising() {
+        peripheralManager?.stopAdvertising()
+        isAdvertising = false
+    }
+    
+    // MARK: - BLE Scanning (Tablet -> iPhone)
     func startScanning() {
         if centralManager == nil {
             setupCentralManager()
@@ -58,20 +94,16 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate {
         }
         
         isScanning = true
-        proximityText = "Сканирование эфира..."
+        proximityText = "Поиск банкомата RoPay..."
         
-        // Scan for ALL peripherals without strict UUID filter so ATM is detected immediately
         central.scanForPeripherals(
             withServices: nil,
             options: [CBCentralManagerScanOptionAllowDuplicatesKey: true]
         )
     }
     
-    private var lastRestartTime: Date = Date()
-    
     func restartScanIfNeeded() {
         guard centralManager?.state == .poweredOn else { return }
-        // If not discovered yet or searching, refresh scan every 2.5 seconds to bust CoreBluetooth scan throttling
         if !isAtmNearby && Date().timeIntervalSince(lastRestartTime) > 2.5 {
             lastRestartTime = Date()
             centralManager?.stopScan()
@@ -85,6 +117,20 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate {
     func stopScanning() {
         centralManager?.stopScan()
         isScanning = false
+    }
+    
+    func markReadyForLogin(code: String? = nil) {
+        if let code = code, isValidAtmCode(code) {
+            detectedAtmCode = code
+        }
+        isAtmNearby = true
+        isVeryClose = true
+        proximityText = "Банкомат RoPay рядом! Готово к входу"
+        if !hasTriggeredHaptic {
+            hasTriggeredHaptic = true
+            let generator = UIImpactFeedbackGenerator(style: .heavy)
+            generator.impactOccurred()
+        }
     }
     
     func resetDetection() {
@@ -117,6 +163,15 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate {
         }
     }
     
+    // MARK: - CBPeripheralManagerDelegate
+    func peripheralManagerDidUpdateState(_ peripheral: CBPeripheralManager) {
+        if peripheral.state == .poweredOn {
+            if let uid = currentUserIdToAdvertise {
+                actuallyStartAdvertising(userId: uid)
+            }
+        }
+    }
+    
     private func isValidAtmCode(_ str: String) -> Bool {
         let trimmed = str.trimmingCharacters(in: .whitespacesAndNewlines.union(.controlCharacters))
         return trimmed.count == 6 && trimmed.allSatisfy { $0.isNumber }
@@ -126,11 +181,9 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate {
         let rssiValue = RSSI.intValue
         currentRssi = rssiValue
         
-        // Look for ATM name or advertised service data
         let name = peripheral.name ?? (advertisementData[CBAdvertisementDataLocalNameKey] as? String) ?? ""
         var foundCode: String? = nil
         
-        // 1. Check device name starting with "RoPay-" or "ATM-"
         if name.hasPrefix("RoPay-") {
             let candidate = String(name.dropFirst(6))
             if isValidAtmCode(candidate) {
@@ -143,7 +196,6 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate {
             }
         }
         
-        // 2. Check Service Data (UUID 0000FFF0...)
         if foundCode == nil, let serviceData = advertisementData[CBAdvertisementDataServiceDataKey] as? [CBUUID: Data] {
             for (uuid, data) in serviceData {
                 if uuid == BluetoothManager.atmServiceUUID || uuid.uuidString.contains("FFF0") {
@@ -155,7 +207,6 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate {
             }
         }
         
-        // 3. Check Service UUIDs (UUID 0000FFF0...) or prefix
         var isAtmDevice = (foundCode != nil)
         if !isAtmDevice, let serviceUUIDs = advertisementData[CBAdvertisementDataServiceUUIDsKey] as? [CBUUID] {
             for uuid in serviceUUIDs {
@@ -169,7 +220,6 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate {
             isAtmDevice = true
         }
         
-        // If an authenticated 6-digit ATM code was discovered or ATM peripheral identified
         if isAtmDevice {
             if let code = foundCode {
                 detectedAtmCode = code
@@ -177,8 +227,8 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate {
             detectedAtmName = name.isEmpty ? "Банкомат RoPay" : name
             isAtmNearby = true
             
-            // Strict proximity requirement: very close to tablet (<= 15cm is RSSI >= -58 dBm)
-            if rssiValue >= -58 {
+            // Proximity range (<= 25cm is RSSI >= -68 dBm)
+            if rssiValue >= -68 {
                 isVeryClose = true
                 proximityText = "Банкомат рядом! (\(rssiValue) dBm)"
                 if !hasTriggeredHaptic {
@@ -187,8 +237,6 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate {
                     generator.impactOccurred()
                 }
             } else {
-                isVeryClose = false
-                hasTriggeredHaptic = false
                 proximityText = "Поднесите iPhone вплотную к экрану (\(rssiValue) dBm)"
             }
         }

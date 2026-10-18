@@ -233,4 +233,83 @@ class APIService: ObservableObject {
         let res = try JSONDecoder().decode(AtmActiveCodeResponse.self, from: data)
         return res.code
     }
+    
+    // MARK: - Real-time WebSocket Notifications
+    private var webSocketTask: URLSessionWebSocketTask?
+    private var isConnectedToWebSocket: Bool = false
+    private var currentListeningUserId: Int?
+    
+    func startTransactionNotifications(userId: Int) {
+        currentListeningUserId = userId
+        connectWebSocket(userId: userId)
+    }
+    
+    func stopTransactionNotifications() {
+        webSocketTask?.cancel(with: .goingAway, reason: nil)
+        webSocketTask = nil
+        isConnectedToWebSocket = false
+        currentListeningUserId = nil
+    }
+    
+    private func connectWebSocket(userId: Int) {
+        let wsHost = cleanBaseURL.replacingOccurrences(of: "http://", with: "ws://").replacingOccurrences(of: "https://", with: "wss://")
+        guard let url = URL(string: "\(wsHost)/ws/client/\(userId)") else { return }
+        
+        let session = URLSession(configuration: .default)
+        webSocketTask = session.webSocketTask(with: url)
+        webSocketTask?.resume()
+        isConnectedToWebSocket = true
+        
+        listenWebSocketMessages(userId: userId)
+    }
+    
+    private func listenWebSocketMessages(userId: Int) {
+        webSocketTask?.receive { [weak self] result in
+            guard let self = self else { return }
+            switch result {
+            case .success(let message):
+                switch message {
+                case .string(let text):
+                    self.handleWebSocketMessage(text)
+                case .data(let data):
+                    if let text = String(data: data, encoding: .utf8) {
+                        self.handleWebSocketMessage(text)
+                    }
+                @unknown default:
+                    break
+                }
+                // Continue listening
+                self.listenWebSocketMessages(userId: userId)
+            case .failure:
+                self.isConnectedToWebSocket = false
+                // Auto-reconnect after 3 seconds
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                    if let uid = self.currentListeningUserId {
+                        self.connectWebSocket(userId: uid)
+                    }
+                }
+            }
+        }
+    }
+    
+    private func handleWebSocketMessage(_ text: String) {
+        guard let data = text.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let type = json["type"] as? String else { return }
+        
+        if type == "atm_operation" {
+            let title = json["title"] as? String ?? "RoPay Банкомат"
+            let msg = json["message"] as? String ?? "Операция в банкомате успешно выполнена"
+            let action = json["action"] as? String ?? ""
+            let isDeposit = (action == "DEPOSIT" || action == "TRANSFER_IN")
+            
+            DispatchQueue.main.async {
+                NotificationManager.shared.showAtmNotification(
+                    title: title,
+                    body: msg,
+                    isDeposit: isDeposit
+                )
+            }
+        }
+    }
 }

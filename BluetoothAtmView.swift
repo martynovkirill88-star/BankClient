@@ -12,7 +12,9 @@ struct BluetoothAtmView: View {
     @State private var alertMessage: String = ""
     @State private var showAlert: Bool = false
     @State private var radarPulse: Bool = false
-    private let pollTimer = Timer.publish(every: 1.5, on: .main, in: .common).autoconnect()
+    @State private var showManualInput: Bool = false
+    
+    private let pollTimer = Timer.publish(every: 1.2, on: .main, in: .common).autoconnect()
     
     var activeCode: String {
         btManager.detectedAtmCode ?? manualCode
@@ -22,7 +24,10 @@ struct BluetoothAtmView: View {
         if !manualCode.isEmpty && manualCode.count == 6 {
             return true
         }
-        return !activeCode.isEmpty && btManager.isVeryClose
+        if !activeCode.isEmpty {
+            return true
+        }
+        return btManager.isVeryClose || btManager.isAtmNearby
     }
     
     var body: some View {
@@ -33,7 +38,7 @@ struct BluetoothAtmView: View {
                 ScrollView {
                     VStack(spacing: 24) {
                         // Header description
-                        Text("Поднесите iPhone к банкомату RoPay для автоматического распознавания через Bluetooth")
+                        Text("Поднесите iPhone вплотную к экрану банкомата RoPay для бесконтактного входа")
                             .font(.system(size: 14))
                             .foregroundColor(BankTheme.textMuted)
                             .multilineTextAlignment(.center)
@@ -41,7 +46,6 @@ struct BluetoothAtmView: View {
                         
                         // Animated Bluetooth Radar
                         ZStack {
-                            // Concentric pulsing radar rings
                             ForEach(0..<3) { i in
                                 Circle()
                                     .stroke(
@@ -59,7 +63,6 @@ struct BluetoothAtmView: View {
                                     )
                             }
                             
-                            // Center Glowing Icon
                             ZStack {
                                 Circle()
                                     .fill(btManager.isAtmNearby ? BankTheme.mint.opacity(0.2) : BankTheme.purple.opacity(0.2))
@@ -71,13 +74,13 @@ struct BluetoothAtmView: View {
                                     .foregroundColor(btManager.isAtmNearby ? BankTheme.mint : BankTheme.purple)
                             }
                         }
-                        .frame(height: 220)
-                        .padding(.vertical, 10)
+                        .frame(height: 200)
+                        .padding(.vertical, 8)
                         
                         // Live Status Pill
                         HStack(spacing: 8) {
                             Circle()
-                                .fill(btManager.isAtmNearby ? (btManager.isVeryClose ? BankTheme.mint : Color.yellow) : (btManager.isScanning ? Color.yellow : Color.gray))
+                                .fill(canConfirm ? BankTheme.mint : Color.yellow)
                                 .frame(width: 10, height: 10)
                             
                             Text(btManager.proximityText)
@@ -89,45 +92,27 @@ struct BluetoothAtmView: View {
                         .background(BankTheme.bgCard)
                         .cornerRadius(20)
                         
-                        // Detected Code Card (if found by Bluetooth)
-                        if let detected = btManager.detectedAtmCode {
+                        // Detected Code Card (Automatically discovered via BLE or Local Server)
+                        if !activeCode.isEmpty {
                             VStack(spacing: 6) {
-                                Text("КОД БАНКОМАТА ПО BLUETOOTH")
+                                Text("КОД БАНКОМАТА ОБНАРУЖЕН")
                                     .font(.system(size: 11, weight: .bold))
-                                    .foregroundColor(BankTheme.textMuted)
+                                    .foregroundColor(BankTheme.mint)
                                 
-                                Text(formatCode(detected))
-                                    .font(.system(size: 32, weight: .black, design: .monospaced))
-                                    .foregroundColor(btManager.isVeryClose ? BankTheme.mint : Color.yellow)
+                                Text(formatCode(activeCode))
+                                    .font(.system(size: 34, weight: .black, design: .monospaced))
+                                    .foregroundColor(BankTheme.mint)
                                     .tracking(6)
                             }
                             .padding()
                             .frame(maxWidth: .infinity)
-                            .background(BankTheme.mint.opacity(0.08))
-                            .cornerRadius(16)
-                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(btManager.isVeryClose ? BankTheme.mint : Color.yellow.opacity(0.5), lineWidth: 1.5))
-                            .padding(.horizontal, 20)
-                        } else {
-                            // Manual Code Entry Fallback
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("ИЛИ ВВЕДИТЕ 6 ЦИФР С ЭКРАНА БАНКОМАТА")
-                                    .font(.system(size: 11, weight: .bold))
-                                    .foregroundColor(BankTheme.textMuted)
-                                
-                                TextField("123 456", text: $manualCode)
-                                    .font(.system(size: 24, weight: .bold, design: .monospaced))
-                                    .foregroundColor(.white)
-                                    .multilineTextAlignment(.center)
-                                    .keyboardType(.numberPad)
-                                    .padding()
-                                    .background(BankTheme.bgCard)
-                                    .cornerRadius(16)
-                                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(BankTheme.border, lineWidth: 1))
-                            }
+                            .background(BankTheme.mint.opacity(0.12))
+                            .cornerRadius(18)
+                            .overlay(RoundedRectangle(cornerRadius: 18).stroke(BankTheme.mint, lineWidth: 2))
                             .padding(.horizontal, 20)
                         }
                         
-                        // Action Button
+                        // Action Button: Instant Contactless Confirmation
                         Button(action: confirmAtmLogin) {
                             if isLoading {
                                 ProgressView().tint(.white)
@@ -135,13 +120,10 @@ struct BluetoothAtmView: View {
                                 HStack(spacing: 10) {
                                     if canConfirm {
                                         Image(systemName: "bolt.fill")
-                                        Text("Подтвердить вход в банкомате")
-                                    } else if btManager.isAtmNearby {
-                                        Image(systemName: "hand.tap.fill")
-                                        Text("Поднесите телефон вплотную")
+                                        Text("Войти в банкомат (Нажмите)")
                                     } else {
-                                        Image(systemName: "wave.3.forward")
-                                        Text("Поиск банкомата RoPay...")
+                                        Image(systemName: "hand.tap.fill")
+                                        Text("Поднесите телефон к экрану...")
                                     }
                                 }
                                 .font(.system(size: 16, weight: .bold))
@@ -157,19 +139,29 @@ struct BluetoothAtmView: View {
                         .padding(.horizontal, 20)
                         .disabled(!canConfirm || isLoading)
                         
-                        // Rescan Button
-                        Button(action: {
-                            btManager.resetDetection()
-                            btManager.startScanning()
-                        }) {
-                            HStack {
-                                Image(systemName: "arrow.clockwise")
-                                Text("Обновить поиск Bluetooth")
-                            }
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(BankTheme.textMuted)
+                        // Optional manual input toggle (if user ever wants to type manually)
+                        Button(action: { withAnimation { showManualInput.toggle() } }) {
+                            Text(showManualInput ? "Скрыть ручной ввод" : "Ввести 6 цифр вручную")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(BankTheme.textMuted)
                         }
                         .padding(.top, 4)
+                        
+                        if showManualInput {
+                            VStack(alignment: .leading, spacing: 8) {
+                                TextField("123 456", text: $manualCode)
+                                    .font(.system(size: 24, weight: .bold, design: .monospaced))
+                                    .foregroundColor(.white)
+                                    .multilineTextAlignment(.center)
+                                    .keyboardType(.numberPad)
+                                    .padding()
+                                    .background(BankTheme.bgCard)
+                                    .cornerRadius(16)
+                                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(BankTheme.border, lineWidth: 1))
+                            }
+                            .padding(.horizontal, 20)
+                            .transition(.opacity)
+                        }
                     }
                     .padding(.vertical, 16)
                 }
@@ -178,43 +170,23 @@ struct BluetoothAtmView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Закрыть") {
-                        dismiss()
-                    }
-                    .foregroundColor(BankTheme.mint)
+                    Button("Закрыть") { dismiss() }
+                        .foregroundColor(BankTheme.mint)
                 }
             }
             .onReceive(pollTimer) { _ in
                 btManager.restartScanIfNeeded()
-                Task {
-                    do {
-                        if let serverCode = try await APIService.shared.fetchActiveAtmCode(), serverCode.count == 6 {
-                            await MainActor.run {
-                                if btManager.isAtmNearby && btManager.detectedAtmCode == nil {
-                                    btManager.detectedAtmCode = serverCode
-                                }
-                            }
-                        }
-                    } catch {}
-                }
+                checkActiveAtm()
             }
             .onAppear {
                 radarPulse = true
                 btManager.startScanning()
-                Task {
-                    do {
-                        if let serverCode = try await APIService.shared.fetchActiveAtmCode(), serverCode.count == 6 {
-                            await MainActor.run {
-                                if btManager.isAtmNearby && btManager.detectedAtmCode == nil {
-                                    btManager.detectedAtmCode = serverCode
-                                }
-                            }
-                        }
-                    } catch {}
-                }
+                btManager.startAdvertising(userId: currentUser.id)
+                checkActiveAtm()
             }
             .onDisappear {
                 btManager.stopScanning()
+                btManager.stopAdvertising()
             }
             .alert("Вход в банкомат", isPresented: $showAlert) {
                 Button("ОК") {
@@ -223,6 +195,18 @@ struct BluetoothAtmView: View {
             } message: {
                 Text(alertMessage)
             }
+        }
+    }
+    
+    private func checkActiveAtm() {
+        Task {
+            do {
+                if let serverCode = try await APIService.shared.fetchActiveAtmCode(), serverCode.count == 6 {
+                    await MainActor.run {
+                        btManager.markReadyForLogin(code: serverCode)
+                    }
+                }
+            } catch {}
         }
     }
     
@@ -236,12 +220,9 @@ struct BluetoothAtmView: View {
     }
     
     private func confirmAtmLogin() {
-        guard !activeCode.isEmpty else { return }
-        
         let context = LAContext()
         var error: NSError?
         
-        // Optional Face ID check before approving ATM entrance
         if context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) {
             context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: "Подтвердите вход в банкомат") { success, _ in
                 DispatchQueue.main.async {
@@ -260,9 +241,10 @@ struct BluetoothAtmView: View {
         
         Task {
             do {
+                let codeToSend = activeCode.isEmpty ? nil : activeCode
                 let msg = try await APIService.shared.loginToAtm(
                     userId: currentUser.id,
-                    code: activeCode
+                    code: codeToSend
                 )
                 await MainActor.run {
                     isLoading = false

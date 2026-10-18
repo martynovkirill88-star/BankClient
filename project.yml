@@ -13,6 +13,7 @@ targets:
       - path: Theme.swift
       - path: Models.swift
       - path: APIService.swift
+      - path: NotificationManager.swift
       - path: BluetoothManager.swift
       - path: PinLockView.swift
       - path: WelcomeView.swift
