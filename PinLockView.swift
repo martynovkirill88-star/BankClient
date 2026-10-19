@@ -132,7 +132,7 @@ struct PinLockView: View {
                 
                 Spacer()
                 
-                // Numeric Keypad with Liquid Glass Buttons
+                // Numeric Keypad — iOS 26+ Liquid Glass / Fallback
                 VStack(spacing: 16) {
                     let rows = [
                         ["1", "2", "3"],
@@ -144,47 +144,70 @@ struct PinLockView: View {
                     ForEach(rows, id: \.self) { row in
                         HStack(spacing: 18) {
                             ForEach(row, id: \.self) { key in
-                                Button(action: { handleKeypad(key) }) {
-                                    Group {
-                                        if key == "DEL" {
-                                            Image(systemName: "delete.left.fill")
-                                                .font(.system(size: 22, weight: .semibold))
-                                                .foregroundColor(BankTheme.textMuted)
-                                        } else {
-                                            Text(key)
-                                                .font(.system(size: 28, weight: .semibold, design: .rounded))
-                                                .foregroundColor(key == "C" ? BankTheme.textMuted : .white)
-                                        }
+                                if #available(iOS 26.0, *) {
+                                    // ✅ iOS 26+: нативный системный эффект Liquid Glass
+                                    Button(action: { handleKeypad(key) }) {
+                                        PinKeyLabel(key: key)
+                                            .frame(maxWidth: .infinity, maxHeight: .infinity)
                                     }
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                    .glassEffect(cornerRadius: 32)
+                                    .frame(width: 76, height: 76)
+                                    .buttonStyle(.glass)
+                                    .disabled(isLoading)
+                                } else {
+                                    // Fallback для iOS < 26
+                                    Button(action: { handleKeypad(key) }) {
+                                        PinKeyLabel(key: key)
+                                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                            .background(
+                                                .ultraThinMaterial,
+                                                in: RoundedRectangle(cornerRadius: 32, style: .continuous)
+                                            )
+                                    }
+                                    .frame(width: 76, height: 76)
+                                    .buttonStyle(GlassScaleButtonStyle())
+                                    .disabled(isLoading)
                                 }
-                                .frame(width: 76, height: 76)
-                                .buttonStyle(GlassScaleButtonStyle())
-                                .disabled(isLoading)
                             }
                         }
                     }
                 }
                 .padding(.horizontal, 24)
                 
-                // Liquid Glass Face ID Button
-                Button(action: authenticateWithBiometrics) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "faceid")
-                            .font(.system(size: 22, weight: .bold))
-                            .foregroundColor(BankTheme.mint)
-                        
-                        Text("Войти по Face ID")
-                            .font(.system(size: 16, weight: .bold, design: .rounded))
-                            .foregroundColor(.white)
+                // Face ID Button — iOS 26+ Liquid Glass / Fallback
+                if #available(iOS 26.0, *) {
+                    Button(action: authenticateWithBiometrics) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "faceid")
+                                .font(.system(size: 22, weight: .bold))
+                            Text("Войти по Face ID")
+                                .font(.system(size: 16, weight: .bold, design: .rounded))
+                        }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .glassEffect(cornerRadius: 18)
+                    .buttonStyle(.glass)
+                    .padding(.horizontal, 32)
+                } else {
+                    Button(action: authenticateWithBiometrics) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "faceid")
+                                .font(.system(size: 22, weight: .bold))
+                                .foregroundColor(BankTheme.mint)
+                            Text("Войти по Face ID")
+                                .font(.system(size: 16, weight: .bold, design: .rounded))
+                                .foregroundColor(.white)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(
+                            .ultraThinMaterial,
+                            in: RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        )
+                    }
+                    .buttonStyle(GlassScaleButtonStyle())
+                    .padding(.horizontal, 32)
                 }
-                .buttonStyle(GlassScaleButtonStyle())
-                .padding(.horizontal, 32)
                 
                 // Footer Links
                 HStack(spacing: 24) {
@@ -517,36 +540,26 @@ struct RegisterSheetView: View {
     }
 }
 
-// MARK: - Native Liquid Glass System Modifiers
-extension View {
-    /// Нативный модификатор Liquid Glass на базе системных материалов SwiftUI (.ultraThinMaterial)
-    /// с динамическим преломлением фона, мягкой линзовой границей и световым контуром.
-    func glassEffect(cornerRadius: CGFloat = 32) -> some View {
-        self
-            .background(
-                .ultraThinMaterial,
-                in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .strokeBorder(
-                        LinearGradient(
-                            stops: [
-                                .init(color: .white.opacity(0.65), location: 0.0),
-                                .init(color: .white.opacity(0.18), location: 0.35),
-                                .init(color: .clear, location: 0.70),
-                                .init(color: .white.opacity(0.25), location: 1.0)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1.2
-                    )
-            )
-            .shadow(color: .black.opacity(0.25), radius: 10, x: 0, y: 5)
+// MARK: - Вспомогательный ярлык для кнопки ПИН-пада
+struct PinKeyLabel: View {
+    let key: String
+    
+    var body: some View {
+        Group {
+            if key == "DEL" {
+                Image(systemName: "delete.left.fill")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundColor(.secondary)
+            } else {
+                Text(key)
+                    .font(.system(size: 28, weight: .semibold, design: .rounded))
+                    .foregroundColor(key == "C" ? .secondary : .white)
+            }
+        }
     }
 }
 
+// MARK: - Fallback Button Style для iOS < 26
 struct GlassScaleButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
