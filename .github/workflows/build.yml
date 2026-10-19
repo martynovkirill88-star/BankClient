@@ -26,7 +26,7 @@ jobs:
       - name: Generate Xcode Project
         run: xcodegen generate
 
-      - name: Build and Archive
+      - name: Build and Archive ClientBank
         run: |
           xcodebuild archive \
             -project ClientBank.xcodeproj \
@@ -38,11 +38,10 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             AD_HOC_CODE_SIGNING_ALLOWED=YES
 
-      - name: Package Payload to IPA
+      - name: Package Payload to ClientBank.ipa
         run: |
           mkdir -p build/Payload
           cp -r build/ClientBank.xcarchive/Products/Applications/ClientBank.app build/Payload/
-          # Ensure complete original Info.plist with all required keys (CFBundleSupportedPlatforms, MinimumOSVersion, UIDeviceFamily, CFBundleIcons) is injected
           cp Info.plist.orig build/Payload/ClientBank.app/Info.plist
           plutil -replace CFBundleIdentifier -string "ru.martynov.clientbank" build/Payload/ClientBank.app/Info.plist
           plutil -replace CFBundleExecutable -string "ClientBank" build/Payload/ClientBank.app/Info.plist
@@ -50,29 +49,61 @@ jobs:
           plutil -replace CFBundleDisplayName -string "RoPay" build/Payload/ClientBank.app/Info.plist
           plutil -replace MinimumOSVersion -string "16.0" build/Payload/ClientBank.app/Info.plist
           plutil -convert xml1 build/Payload/ClientBank.app/Info.plist
-          # Copy loose app icon files so SpringBoard / sideloaders immediately load them
           cp AppIcon*.png build/Payload/ClientBank.app/ || true
           cp Icon*.png build/Payload/ClientBank.app/ || true
-          echo "=== VERIFYING FINAL INFO.PLIST ==="
-          cat build/Payload/ClientBank.app/Info.plist
           cd build
           zip -r ClientBank.ipa Payload
+          rm -rf Payload
           cd ..
 
-      - name: Upload IPA Artifact
+      - name: Build and Archive AdminBank
+        run: |
+          xcodebuild archive \
+            -project ClientBank.xcodeproj \
+            -scheme AdminBank \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/AdminBank.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES
+
+      - name: Package Payload to AdminBank.ipa
+        run: |
+          mkdir -p build/AdminPayload
+          cp -r build/AdminBank.xcarchive/Products/Applications/AdminBank.app build/AdminPayload/
+          cp Admin/AdminInfo.plist build/AdminPayload/AdminBank.app/Info.plist
+          plutil -replace CFBundleIdentifier -string "ru.martynov.ropayadmin" build/AdminPayload/AdminBank.app/Info.plist
+          plutil -replace CFBundleExecutable -string "AdminBank" build/AdminPayload/AdminBank.app/Info.plist
+          plutil -replace CFBundleName -string "RoPay Admin" build/AdminPayload/AdminBank.app/Info.plist
+          plutil -replace CFBundleDisplayName -string "RoPay Admin" build/AdminPayload/AdminBank.app/Info.plist
+          plutil -replace MinimumOSVersion -string "16.0" build/AdminPayload/AdminBank.app/Info.plist
+          plutil -convert xml1 build/AdminPayload/AdminBank.app/Info.plist
+          cd build
+          mv AdminPayload Payload
+          zip -r AdminBank.ipa Payload
+          rm -rf Payload
+          cd ..
+
+      - name: Upload IPA Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ClientBank-IPA
-          path: build/ClientBank.ipa
+          name: RoPay-IPAs
+          path: |
+            build/ClientBank.ipa
+            build/AdminBank.ipa
           retention-days: 7
 
-      - name: Publish Release (Direct IPA Download)
+      - name: Publish Release (Direct IPAs Download)
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/heads/main')
         with:
-          tag_name: v1.0.15
-          name: "RoPay iOS v1.0.15 (Stories / Statuses, Application Registration & Updated UI)"
-          body: "RoPay v1.0.15: Добавлены статусы (Stories) в шапке банка с автопроигрыванием 10 сек и видео, обновлена регистрация на подачу заявок, банкоматная кнопка переведена в анонс бесконтактного входа."
-          files: build/ClientBank.ipa
+          tag_name: v1.0.16
+          name: "RoPay iOS v1.0.16 (Client Bank + Admin App with Stories & Applications)"
+          body: "RoPay v1.0.16: В релиз включены оба приложения: RoPay для клиентов банка (со статусами и подачей заявок) и RoPay Admin для администратора (одобрение заявок, публикация историй для iOS/Android и управление балансами)."
+          files: |
+            build/ClientBank.ipa
+            build/AdminBank.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

@@ -41,3 +41,22 @@ targets:
       INFOPLIST_KEY_NSFaceIDUsageDescription: "Используется для быстрого и безопасного входа в банк по Face ID."
       INFOPLIST_KEY_NSCameraUsageDescription: "Используется для биометрической верификации лица и Face ID."
       INFOPLIST_KEY_NSContactsUsageDescription: "Приложение использует контакты для быстрого перевода средств клиентам банка RoPay."
+
+  AdminBank:
+    type: application
+    platform: iOS
+    sources:
+      - path: Admin
+    info:
+      path: Admin/AdminInfo.plist
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: ru.martynov.ropayadmin
+      INFOPLIST_FILE: Admin/AdminInfo.plist
+      GENERATE_INFOPLIST_FILE: NO
+      SWIFT_VERSION: "5.0"
+      CODE_SIGNING_ALLOWED: NO
+      INFOPLIST_KEY_CFBundleDisplayName: "RoPay Admin"
+      INFOPLIST_KEY_NSCameraUsageDescription: "Используется для съемки фото и видео для публикации статусов банка RoPay."
+      INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "Используется для выбора фото и видео для публикации статусов банка RoPay."
+      INFOPLIST_KEY_NSFaceIDUsageDescription: "Используется для безопасного входа в панель администратора RoPay."
+
