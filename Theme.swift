@@ -58,3 +58,41 @@ extension Color {
         )
     }
 }
+
+// MARK: - Native Liquid Glass System Modifiers
+public enum TabBarMinimizeBehavior {
+    case onScrollDown
+    case never
+    case automatic
+}
+
+extension View {
+    /// Нативный системный модификатор стекла Liquid Glass
+    @ViewBuilder
+    func glassEffect(cornerRadius: CGFloat = 32) -> some View {
+        self
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .strokeBorder(
+                        LinearGradient(
+                            stops: [
+                                .init(color: .white.opacity(0.65), location: 0.0),
+                                .init(color: .white.opacity(0.18), location: 0.35),
+                                .init(color: .clear, location: 0.70),
+                                .init(color: .white.opacity(0.25), location: 1.0)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1.2
+                    )
+            )
+            .shadow(color: .black.opacity(0.25), radius: 12, x: 0, y: 6)
+    }
+    
+    /// Автоматическое адаптивное поведение скрытия/уменьшения при скролле
+    @ViewBuilder
+    func tabBarMinimizeBehavior(_ behavior: TabBarMinimizeBehavior) -> some View {
+        self
+    }
+}

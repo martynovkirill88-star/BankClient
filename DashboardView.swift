@@ -1,33 +1,11 @@
 import SwiftUI
 
-enum DashboardTab: Int, CaseIterable {
-    case home = 0
-    case history = 1
-    case settings = 2
-    
-    var title: String {
-        switch self {
-        case .home: return "Главная"
-        case .history: return "История операций"
-        case .settings: return "Настройки"
-        }
-    }
-    
-    var icon: String {
-        switch self {
-        case .home: return "house.fill"
-        case .history: return "clock.arrow.circlepath"
-        case .settings: return "gearshape.fill"
-        }
-    }
-}
-
 struct DashboardView: View {
     @Binding var currentUser: User?
     var onLock: () -> Void
     
     @StateObject private var btManager = BluetoothManager.shared
-    @State private var selectedTab: DashboardTab = .home
+    @State private var selectedTab: Int = 0
     @State private var transactions: [BankTransaction] = []
     @State private var isLoadingTransactions: Bool = false
     @State private var showTransferSheet: Bool = false
@@ -46,17 +24,19 @@ struct DashboardView: View {
             // Tab content
             Group {
                 switch selectedTab {
-                case .home:
+                case 0:
                     homeView
-                case .history:
+                case 1:
                     historyView
-                case .settings:
+                case 2:
                     SettingsView(currentUser: $currentUser, onLogout: onLock, isEmbedded: true)
+                default:
+                    homeView
                 }
             }
             
             // Bottom Glass Navigation Bar
-            bottomTabBar
+            CustomTabBar(selectedTab: $selectedTab)
         }
         .sheet(isPresented: $showTransferSheet) {
             if let user = currentUser {
@@ -118,30 +98,11 @@ struct DashboardView: View {
                 ScrollView {
                     VStack(spacing: 20) {
                         
-                        // ── Top Bar (Clean: Avatar & Name only) ─────────────
-                        HStack(spacing: 14) {
-                            ZStack {
-                                Circle()
-                                    .fill(BankTheme.mint.opacity(0.15))
-                                    .frame(width: 48, height: 48)
-                                Text(userInitial)
-                                    .font(.system(size: 20, weight: .bold))
-                                    .foregroundColor(BankTheme.mint)
-                            }
-                            
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(currentUser?.fullName ?? "Клиент")
-                                    .font(.system(size: 18, weight: .black))
-                                    .foregroundColor(.white)
-                                Text("Активный счёт RoPay")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(BankTheme.textMuted)
-                            }
-                            
-                            Spacer()
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.top, 10)
+                        // ── Top Bar (GlassTopBar by Ricky Aguilar Pattern) ──
+                        GlassTopBar(
+                            userInitial: userInitial,
+                            userName: currentUser?.fullName ?? "Клиент"
+                        )
                         
                         // ── Phone Number Card ─────────────────────────────
                         HStack {
@@ -267,7 +228,7 @@ struct DashboardView: View {
                         if #available(iOS 26.0, *) {
                             Button(action: {
                                 withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                                    selectedTab = .settings
+                                    selectedTab = 2
                                 }
                             }) {
                                 FaceIDBannerContent(hasFaceBiometrics: hasFaceBiometrics)
@@ -277,7 +238,7 @@ struct DashboardView: View {
                         } else {
                             Button(action: {
                                 withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                                    selectedTab = .settings
+                                    selectedTab = 2
                                 }
                             }) {
                                 FaceIDBannerContent(hasFaceBiometrics: hasFaceBiometrics)
@@ -295,7 +256,7 @@ struct DashboardView: View {
                                 Spacer()
                                 Button(action: {
                                     withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                                        selectedTab = .history
+                                        selectedTab = 1
                                     }
                                 }) {
                                     Text("Все")
@@ -408,11 +369,12 @@ struct DashboardView: View {
             ZStack {
                 Circle()
                     .fill(tx.isPositive ? BankTheme.mint.opacity(0.12) : BankTheme.bgCardSubtle)
-                    .frame(width: 44, height: 44)
                 Image(systemName: tx.iconName)
                     .font(.system(size: 18))
                     .foregroundColor(tx.isPositive ? BankTheme.mint : BankTheme.textMuted)
             }
+            .frame(width: 44, height: 44)
+            
             VStack(alignment: .leading, spacing: 3) {
                 Text(tx.title)
                     .font(.system(size: 14, weight: .bold))
@@ -430,82 +392,6 @@ struct DashboardView: View {
         }
         .padding(14)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-    }
-    
-    // MARK: - Bottom Glass Tab Bar
-    private var bottomTabBar: some View {
-        HStack(spacing: 8) {
-            ForEach(DashboardTab.allCases, id: \.self) { tab in
-                let isSelected = selectedTab == tab
-                
-                if #available(iOS 26.0, *) {
-                    Button(action: {
-                        let gen = UIImpactFeedbackGenerator(style: .light)
-                        gen.impactOccurred()
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                            selectedTab = tab
-                        }
-                    }) {
-                        VStack(spacing: 4) {
-                            Image(systemName: tab.icon)
-                                .font(.system(size: 19, weight: isSelected ? .bold : .medium))
-                            Text(tab.title)
-                                .font(.system(size: 10, weight: isSelected ? .bold : .medium))
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.8)
-                        }
-                        .foregroundColor(isSelected ? BankTheme.mint : BankTheme.textMuted)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 8)
-                    }
-                    .buttonStyle(.glass)
-                } else {
-                    Button(action: {
-                        let gen = UIImpactFeedbackGenerator(style: .light)
-                        gen.impactOccurred()
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                            selectedTab = tab
-                        }
-                    }) {
-                        VStack(spacing: 4) {
-                            Image(systemName: tab.icon)
-                                .font(.system(size: 19, weight: isSelected ? .bold : .medium))
-                            Text(tab.title)
-                                .font(.system(size: 10, weight: isSelected ? .bold : .medium))
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.8)
-                        }
-                        .foregroundColor(isSelected ? BankTheme.mint : BankTheme.textMuted)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 8)
-                        .background(
-                            isSelected ? BankTheme.mint.opacity(0.12) : Color.clear,
-                            in: RoundedRectangle(cornerRadius: 14)
-                        )
-                    }
-                }
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(
-            .ultraThinMaterial,
-            in: RoundedRectangle(cornerRadius: 24, style: .continuous)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(
-                    LinearGradient(
-                        colors: [.white.opacity(0.35), .white.opacity(0.08), .clear],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1
-                )
-        )
-        .shadow(color: Color.black.opacity(0.35), radius: 15, x: 0, y: 8)
-        .padding(.horizontal, 16)
-        .padding(.bottom, 6)
     }
     
     private var userInitial: String {
@@ -539,6 +425,147 @@ struct DashboardView: View {
             } catch {
                 await MainActor.run { isLoadingTransactions = false }
             }
+        }
+    }
+}
+
+// MARK: - Glass Top Bar (Ricky Aguilar Pattern)
+struct GlassTopBar: View {
+    let userInitial: String
+    let userName: String
+    
+    var body: some View {
+        #if os(iOS)
+        if #available(iOS 26.0, *) {
+            HStack {
+                // Основной контент топ-бара (аватар, имя, статус)
+                content
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(.ultraThinMaterial)
+            .glassEffect(cornerRadius: 24) // Нативный системный модификатор стекла
+            .tabBarMinimizeBehavior(.onScrollDown) // Динамическое уменьшение/скрытие при скролле
+            .cornerRadius(24)
+            .padding(.horizontal, 16)
+            .padding(.top, 10)
+        } else {
+            // Фоллбэк для старых версий
+            fallbackBar
+        }
+        #endif
+    }
+    
+    private var content: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(BankTheme.mint.opacity(0.15))
+                    .frame(width: 44, height: 44)
+                Text(userInitial)
+                    .font(.system(size: 19, weight: .bold))
+                    .foregroundColor(BankTheme.mint)
+            }
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(userName)
+                    .font(.system(size: 17, weight: .black))
+                    .foregroundColor(.white)
+                Text("Активный счёт RoPay")
+                    .font(.system(size: 12))
+                    .foregroundColor(BankTheme.textMuted)
+            }
+            
+            Spacer()
+        }
+    }
+    
+    private var fallbackBar: some View {
+        HStack {
+            content
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(
+            .ultraThinMaterial,
+            in: RoundedRectangle(cornerRadius: 24, style: .continuous)
+        )
+        .padding(.horizontal, 16)
+        .padding(.top, 10)
+    }
+}
+
+// MARK: - Custom Tab Bar (Ricky Aguilar Pattern)
+struct CustomTabBar: View {
+    @Binding var selectedTab: Int
+    
+    var body: some View {
+        #if os(iOS)
+        if #available(iOS 26.0, *) {
+            // Нативный вариант с эффектом Liquid Glass для поддерживаемых версий
+            HStack {
+                TabBarButton(icon: "house.fill", title: "Главная", tag: 0, selection: $selectedTab)
+                TabBarButton(icon: "clock.fill", title: "История", tag: 1, selection: $selectedTab)
+                TabBarButton(icon: "gearshape.fill", title: "Настройки", tag: 2, selection: $selectedTab)
+            }
+            .padding(8)
+            .background(.ultraThinMaterial)
+            .glassEffect(cornerRadius: 32) // Нативный системный модификатор стекла
+            .tabBarMinimizeBehavior(.onScrollDown) // Автоматическое поведение при скролле, как в видео
+            .cornerRadius(32)
+            .padding(.horizontal, 16)
+            .padding(.bottom, 6)
+        } else {
+            // Фоллбэк-вариант для более старых версий iOS
+            HStack {
+                TabBarButton(icon: "house.fill", title: "Главная", tag: 0, selection: $selectedTab)
+                TabBarButton(icon: "clock.fill", title: "История", tag: 1, selection: $selectedTab)
+                TabBarButton(icon: "gearshape.fill", title: "Настройки", tag: 2, selection: $selectedTab)
+            }
+            .padding(8)
+            .background(Color.black.opacity(0.6))
+            .cornerRadius(32)
+            .padding(.horizontal, 16)
+            .padding(.bottom, 6)
+        }
+        #endif
+    }
+}
+
+// MARK: - Tab Bar Button
+struct TabBarButton: View {
+    let icon: String
+    let title: String
+    let tag: Int
+    @Binding var selection: Int
+    
+    var isSelected: Bool {
+        selection == tag
+    }
+    
+    var body: some View {
+        Button(action: {
+            let gen = UIImpactFeedbackGenerator(style: .light)
+            gen.impactOccurred()
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                selection = tag
+            }
+        }) {
+            VStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 19, weight: isSelected ? .bold : .medium))
+                Text(title)
+                    .font(.system(size: 10, weight: isSelected ? .bold : .medium))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .foregroundColor(isSelected ? BankTheme.mint : BankTheme.textMuted)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .background(
+                isSelected ? BankTheme.mint.opacity(0.12) : Color.clear,
+                in: RoundedRectangle(cornerRadius: 14)
+            )
         }
     }
 }
