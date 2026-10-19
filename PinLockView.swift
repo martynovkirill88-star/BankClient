@@ -51,19 +51,7 @@ struct PinLockView: View {
             .ignoresSafeArea()
             
             VStack(spacing: 22) {
-                // Top Bar with Settings
-                HStack {
-                    Spacer()
-                    Button(action: { showSettingsSheet = true }) {
-                        Image(systemName: "gearshape.fill")
-                            .font(.system(size: 20))
-                            .foregroundColor(BankTheme.textMuted)
-                            .padding(12)
-                            .background(BankTheme.bgCard)
-                            .clipShape(Circle())
-                    }
-                }
-                .padding(.horizontal, 24)
+                Spacer().frame(height: 10)
                 
                 Spacer()
                 
@@ -347,10 +335,9 @@ struct PinLockView: View {
     }
 }
 
-// MARK: - Server Settings Sheet
+// MARK: - Server Settings Sheet (Read-Only)
 struct ServerSettingsSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @AppStorage("server_base_url") private var baseURL: String = "http://192.168.1.247:8000"
     
     var body: some View {
         NavigationStack {
@@ -359,21 +346,23 @@ struct ServerSettingsSheet: View {
                 
                 VStack(spacing: 24) {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Адрес сервера API")
+                        Text("Сервер RoPay (Защищённое подключение)")
                             .font(.system(size: 14, weight: .bold))
                             .foregroundColor(BankTheme.textMuted)
                         
-                        TextField("http://192.168.1.247:8000", text: $baseURL)
-                            .font(.system(size: 16))
-                            .foregroundColor(.white)
-                            .padding()
-                            .background(BankTheme.bgCard)
-                            .cornerRadius(14)
-                            .overlay(RoundedRectangle(cornerRadius: 14).stroke(BankTheme.border, lineWidth: 1))
-                            .autocapitalization(.none)
-                            .disableAutocorrection(true)
+                        HStack {
+                            Circle().fill(BankTheme.mint).frame(width: 8, height: 8)
+                            Text("https://app.uchisplus.online")
+                                .font(.system(size: 16, weight: .bold, design: .monospaced))
+                                .foregroundColor(.white)
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(BankTheme.bgCard)
+                        .cornerRadius(14)
+                        .overlay(RoundedRectangle(cornerRadius: 14).stroke(BankTheme.border, lineWidth: 1))
                         
-                        Text("Укажите IP-адрес компьютера в Wi-Fi сети или домен вашего сервера.")
+                        Text("Адрес сервера зафиксирован на защищённом домене банка RoPay.")
                             .font(.system(size: 12))
                             .foregroundColor(BankTheme.textMuted)
                     }
@@ -381,7 +370,7 @@ struct ServerSettingsSheet: View {
                     
                     Spacer()
                     
-                    Button("Сохранить и закрыть") {
+                    Button("Закрыть") {
                         dismiss()
                     }
                     .font(.system(size: 16, weight: .bold))
@@ -394,7 +383,7 @@ struct ServerSettingsSheet: View {
                 }
                 .padding(.top, 24)
             }
-            .navigationTitle("Настройки сервера")
+            .navigationTitle("Сервер банка")
             .navigationBarTitleDisplayMode(.inline)
         }
     }

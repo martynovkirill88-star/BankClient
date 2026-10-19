@@ -5,17 +5,15 @@ import Combine
 class APIService: ObservableObject {
     static let shared = APIService()
     
-    @AppStorage("server_base_url") var baseURL: String = "http://192.168.1.247:8000"
+    // Hardcoded production server URL - fixed to app.uchisplus.online
+    static let productionBaseURL = "https://app.uchisplus.online"
+    
+    var baseURL: String {
+        Self.productionBaseURL
+    }
     
     private var cleanBaseURL: String {
-        var url = baseURL.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !url.hasPrefix("http://") && !url.hasPrefix("https://") {
-            url = "http://" + url
-        }
-        if url.hasSuffix("/") {
-            url.removeLast()
-        }
-        return url
+        Self.productionBaseURL
     }
     
     // MARK: - Register Client

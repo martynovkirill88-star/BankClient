@@ -84,8 +84,6 @@ struct SettingsView: View {
     var isEmbedded: Bool = false
     @Environment(\.dismiss) private var dismiss
     
-    @AppStorage("server_base_url") private var serverUrl: String = "http://192.168.1.247:8000"
-    
     @State private var showCamera: Bool = false
     @State private var capturedImage: UIImage? = nil
     @State private var isUploading: Bool = false
@@ -300,27 +298,38 @@ struct SettingsView: View {
                         }
                         .padding(.horizontal, 20)
                         
-                        // SECTION 2: SERVER SETTINGS
+                        // SECTION 2: SERVER SETTINGS (IMMUTABLE SECURE CONNECTION)
                         VStack(alignment: .leading, spacing: 14) {
                             HStack {
-                                Image(systemName: "network")
+                                Image(systemName: "lock.shield.fill")
                                     .foregroundColor(BankTheme.mint)
                                     .font(.system(size: 18, weight: .bold))
                                 Text("СЕРВЕР БАНКА")
                                     .font(.system(size: 12, weight: .bold))
                                     .foregroundColor(BankTheme.textMuted)
+                                Spacer()
+                                Text("SSL Защищено")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundColor(BankTheme.mint)
+                                    .padding(.horizontal, 8).padding(.vertical, 3)
+                                    .background(BankTheme.mint.opacity(0.12))
+                                    .cornerRadius(6)
                             }
                             
-                            VStack(alignment: .leading, spacing: 10) {
-                                TextField("http://192.168.1.247:8000", text: $serverUrl)
-                                    .font(.system(size: 15, design: .monospaced))
-                                    .foregroundColor(.white)
-                                    .autocapitalization(.none)
-                                    .disableAutocorrection(true)
-                                    .padding(12)
-                                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack(spacing: 8) {
+                                    Circle()
+                                        .fill(BankTheme.mint)
+                                        .frame(width: 8, height: 8)
+                                    Text("app.uchisplus.online")
+                                        .font(.system(size: 15, weight: .bold, design: .monospaced))
+                                        .foregroundColor(.white)
+                                }
+                                .padding(12)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                                 
-                                Text("Адрес локального сервера RoPay для связи банкомата и клиента.")
+                                Text("Официальный защищённый сервер RoPay. Настройки адреса зафиксированы и управляются системой.")
                                     .font(.system(size: 12))
                                     .foregroundColor(BankTheme.textMuted)
                             }
