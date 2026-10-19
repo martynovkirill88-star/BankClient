@@ -70,9 +70,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/heads/main')
         with:
-          tag_name: v1.0.14
-          name: "RoPay iOS v1.0.14 (Multi-iPhone Isolation & Reliable Screen Proximity -70 dBm)"
-          body: "RoPay v1.0.14: Полная изоляция от других iPhone (телефоны больше не перебивают сигнал друг друга), надёжный порог входа -70 dBm прямо у экрана планшета со сглаживанием RSSI."
+          tag_name: v1.0.15
+          name: "RoPay iOS v1.0.15 (Stories / Statuses, Application Registration & Updated UI)"
+          body: "RoPay v1.0.15: Добавлены статусы (Stories) в шапке банка с автопроигрыванием 10 сек и видео, обновлена регистрация на подачу заявок, банкоматная кнопка переведена в анонс бесконтактного входа."
           files: build/ClientBank.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

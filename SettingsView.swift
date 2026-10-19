@@ -127,24 +127,52 @@ struct SettingsView: View {
                     VStack(spacing: 24) {
                         // User Profile Header
                         VStack(spacing: 12) {
-                            ZStack {
+                            ZStack(alignment: .bottomTrailing) {
                                 Circle()
                                     .fill(BankTheme.mint.opacity(0.15))
                                     .frame(width: 80, height: 80)
                                 
-                                if let captured = capturedImage {
-                                    Image(uiImage: captured)
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fill)
-                                        .frame(width: 80, height: 80)
+                                Image(systemName: "person.crop.circle.fill")
+                                    .font(.system(size: 60))
+                                    .foregroundColor(BankTheme.mint)
+                                    .frame(width: 80, height: 80)
+                                
+                                Button(action: {
+                                    alertTitle = "Функция недоступна"
+                                    alertMessage = "Данная функция на данный момент пока что не работает."
+                                    isSuccessAlert = false
+                                    showAlert = true
+                                }) {
+                                    Image(systemName: "camera.fill")
+                                        .font(.system(size: 12, weight: .bold))
+                                        .foregroundColor(.black)
+                                        .padding(6)
+                                        .background(BankTheme.mint)
                                         .clipShape(Circle())
-                                } else {
-                                    Image(systemName: "person.crop.circle.fill")
-                                        .font(.system(size: 60))
-                                        .foregroundColor(BankTheme.mint)
+                                        .overlay(Circle().stroke(BankTheme.bgDark, lineWidth: 2))
                                 }
+                                .offset(x: 2, y: 2)
                             }
-                            .overlay(Circle().stroke(BankTheme.mint, lineWidth: 2))
+                            .overlay(Circle().stroke(BankTheme.mint.opacity(0.4), lineWidth: 2))
+                            
+                            Button(action: {
+                                alertTitle = "Функция недоступна"
+                                alertMessage = "Данная функция на данный момент пока что не работает."
+                                isSuccessAlert = false
+                                showAlert = true
+                            }) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "arrow.triangle.2.circlepath.camera.fill")
+                                        .font(.system(size: 12))
+                                    Text("Переснять фото")
+                                        .font(.system(size: 13, weight: .bold))
+                                }
+                                .foregroundColor(BankTheme.mint)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 6)
+                                .background(BankTheme.mint.opacity(0.12))
+                                .clipShape(Capsule())
+                            }
                             
                             VStack(spacing: 4) {
                                 Text(currentUser?.fullName ?? "Пользователь RoPay")
@@ -157,146 +185,6 @@ struct SettingsView: View {
                             }
                         }
                         .padding(.top, 10)
-                        
-                        // SECTION 1: FACE ID & BIOMETRICS
-                        VStack(alignment: .leading, spacing: 14) {
-                            HStack {
-                                Image(systemName: "faceid")
-                                    .foregroundColor(BankTheme.mint)
-                                    .font(.system(size: 18, weight: .bold))
-                                Text("БИОМЕТРИЯ ДЛЯ БАНКОМАТА")
-                                    .font(.system(size: 12, weight: .bold))
-                                    .foregroundColor(BankTheme.textMuted)
-                            }
-                            
-                            VStack(alignment: .leading, spacing: 12) {
-                                HStack {
-                                    Text("Вход по взгляду в банкомате:")
-                                        .font(.system(size: 14))
-                                        .foregroundColor(.white)
-                                    
-                                    Spacer()
-                                    
-                                    Text(hasFaceBiometrics ? "Подключен ✓" : "Не подключен")
-                                        .font(.system(size: 13, weight: .bold))
-                                        .foregroundColor(hasFaceBiometrics ? BankTheme.mint : BankTheme.danger)
-                                        .padding(.horizontal, 10)
-                                        .padding(.vertical, 4)
-                                        .background(
-                                            (hasFaceBiometrics ? BankTheme.mint : BankTheme.danger).opacity(0.15)
-                                        )
-                                        .cornerRadius(10)
-                                }
-                                
-                                Text("Сделайте снимок лица на фронтальную камеру. Ваше фото будет добавлено в систему распознавания банкоматов RoPay.")
-                                    .font(.system(size: 13))
-                                    .foregroundColor(BankTheme.textMuted)
-                                    .lineSpacing(2)
-                                
-                                // Preview captured image if taken
-                                if let image = capturedImage {
-                                    HStack(spacing: 14) {
-                                        Image(uiImage: image)
-                                            .resizable()
-                                            .scaledToFill()
-                                            .frame(width: 70, height: 70)
-                                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(BankTheme.mint, lineWidth: 2))
-                                        
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            Text("Снимок готов к отправке")
-                                                .font(.system(size: 13, weight: .bold))
-                                                .foregroundColor(.white)
-                                            Text("Нажмите кнопку ниже для привязки")
-                                                .font(.system(size: 11))
-                                                .foregroundColor(BankTheme.textMuted)
-                                        }
-                                        
-                                        Spacer()
-                                        
-                                        Button(action: { capturedImage = nil }) {
-                                            Image(systemName: "xmark.circle.fill")
-                                                .foregroundColor(BankTheme.textMuted)
-                                                .font(.system(size: 20))
-                                        }
-                                    }
-                                    .padding(10)
-                                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                                }
-                                
-                                // Action buttons: Camera + Upload
-                                HStack(spacing: 12) {
-                                    if #available(iOS 26.0, *) {
-                                        Button(action: { showCamera = true }) {
-                                            HStack {
-                                                Image(systemName: "camera.fill")
-                                                Text(capturedImage == nil ? (hasFaceBiometrics ? "Переснять фото" : "Сделать снимок лица") : "Переснять")
-                                                    .font(.system(size: 14, weight: .bold))
-                                            }
-                                            .foregroundColor(.white)
-                                            .frame(maxWidth: .infinity)
-                                            .padding(.vertical, 12)
-                                        }
-                                        .buttonStyle(.glass)
-                                        
-                                        if capturedImage != nil {
-                                            Button(action: uploadBiometrics) {
-                                                HStack {
-                                                    if isUploading {
-                                                        ProgressView().tint(.white)
-                                                    } else {
-                                                        Image(systemName: "checkmark.circle.fill")
-                                                        Text("Привязать")
-                                                            .font(.system(size: 14, weight: .bold))
-                                                    }
-                                                }
-                                                .foregroundColor(.white)
-                                                .frame(maxWidth: .infinity)
-                                                .padding(.vertical, 12)
-                                            }
-                                            .buttonStyle(.glass)
-                                            .disabled(isUploading)
-                                        }
-                                    } else {
-                                        Button(action: { showCamera = true }) {
-                                            HStack {
-                                                Image(systemName: "camera.fill")
-                                                Text(capturedImage == nil ? (hasFaceBiometrics ? "Переснять фото" : "Сделать снимок лица") : "Переснять")
-                                                    .font(.system(size: 14, weight: .bold))
-                                            }
-                                            .foregroundColor(.white)
-                                            .frame(maxWidth: .infinity)
-                                            .padding(.vertical, 12)
-                                            .background(BankTheme.purpleGradient)
-                                            .cornerRadius(14)
-                                        }
-                                        
-                                        if capturedImage != nil {
-                                            Button(action: uploadBiometrics) {
-                                                HStack {
-                                                    if isUploading {
-                                                        ProgressView().tint(.black)
-                                                    } else {
-                                                        Image(systemName: "checkmark.circle.fill")
-                                                        Text("Привязать")
-                                                            .font(.system(size: 14, weight: .bold))
-                                                    }
-                                                }
-                                                .foregroundColor(.black)
-                                                .frame(maxWidth: .infinity)
-                                                .padding(.vertical, 12)
-                                                .background(BankTheme.mint)
-                                                .cornerRadius(14)
-                                            }
-                                            .disabled(isUploading)
-                                        }
-                                    }
-                                }
-                            }
-                            .padding(18)
-                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                        }
-                        .padding(.horizontal, 20)
                         
                         // SECTION 2: SERVER SETTINGS (IMMUTABLE SECURE CONNECTION)
                         VStack(alignment: .leading, spacing: 14) {

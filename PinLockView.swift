@@ -216,11 +216,7 @@ struct PinLockView: View {
             }
         }
         .sheet(isPresented: $showRegisterSheet) {
-            RegisterSheetView(onSuccess: { registeredUser in
-                savedPhone = registeredUser.phone ?? ""
-                currentUser = registeredUser
-                showWelcomeScreen = true
-            })
+            RegisterSheetView()
         }
         .sheet(isPresented: $showSettingsSheet) {
             ServerSettingsSheet()
@@ -389,18 +385,21 @@ struct ServerSettingsSheet: View {
     }
 }
 
-// MARK: - Registration Sheet
+// MARK: - Registration Sheet (Application for Opening Bank Account)
 struct RegisterSheetView: View {
     @Environment(\.dismiss) private var dismiss
-    var onSuccess: (User) -> Void
     
     @State private var name: String = ""
     @State private var surname: String = ""
     @State private var phone: String = "+7"
     @State private var pin1: String = ""
     @State private var pin2: String = ""
+    @State private var telegram: String = ""
+    
     @State private var isLoading: Bool = false
     @State private var errorMessage: String = ""
+    @State private var showSuccessAlert: Bool = false
+    @State private var successMessage: String = ""
     
     var body: some View {
         NavigationStack {
@@ -408,63 +407,153 @@ struct RegisterSheetView: View {
                 BankTheme.bgDark.ignoresSafeArea()
                 
                 ScrollView {
-                    VStack(spacing: 16) {
-                        formField(title: "ИМЯ", placeholder: "Кирилл", text: $name)
-                        formField(title: "ФАМИЛИЯ", placeholder: "Смирнов", text: $surname)
-                        formField(title: "НОМЕР ТЕЛЕФОНА", placeholder: "+7 999 123-45-67", text: $phone)
+                    VStack(spacing: 20) {
                         
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("ПИН-КОД (4 ЦИФРЫ)")
-                                .font(.system(size: 12, weight: .bold))
-                                .foregroundColor(BankTheme.textMuted)
-                            SecureField("••••", text: $pin1)
-                                .keyboardType(.numberPad)
-                                .padding()
-                                .background(BankTheme.bgCard)
-                                .cornerRadius(14)
-                                .overlay(RoundedRectangle(cornerRadius: 14).stroke(BankTheme.border, lineWidth: 1))
+                        // Header info card matching user instruction
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack(spacing: 10) {
+                                Image(systemName: "globe.europe.africa.fill")
+                                    .font(.system(size: 20))
+                                    .foregroundColor(BankTheme.mint)
+                                Text("ОТКРЫТИЕ СЧЁТА")
+                                    .font(.system(size: 13, weight: .black))
+                                    .foregroundColor(BankTheme.mint)
+                            }
+                            
+                            Text("Регистрация доступна на нашем веб-сайте ropay.site. Оставьте заявку, чтобы открыть счет в банке RoPay:")
+                                .font(.system(size: 14, weight: .medium))
                                 .foregroundColor(.white)
+                                .lineSpacing(3)
                         }
+                        .padding(16)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                         
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("ПОВТОРИТЕ ПИН-КОД")
-                                .font(.system(size: 12, weight: .bold))
-                                .foregroundColor(BankTheme.textMuted)
-                            SecureField("••••", text: $pin2)
-                                .keyboardType(.numberPad)
-                                .padding()
-                                .background(BankTheme.bgCard)
-                                .cornerRadius(14)
-                                .overlay(RoundedRectangle(cornerRadius: 14).stroke(BankTheme.border, lineWidth: 1))
-                                .foregroundColor(.white)
+                        // Form fields
+                        VStack(spacing: 16) {
+                            formField(title: "ИМЯ В ПРИЛОЖЕНИИ", placeholder: "Кирилл", text: $name)
+                            formField(title: "ФАМИЛИЯ В ПРИЛОЖЕНИИ", placeholder: "Мартынов", text: $surname)
+                            
+                            // Phone field with note
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("НОМЕР ТЕЛЕФОНА")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundColor(BankTheme.textMuted)
+                                
+                                TextField("+7 999 123-45-67", text: $phone)
+                                    .keyboardType(.phonePad)
+                                    .padding()
+                                    .background(BankTheme.bgCard)
+                                    .cornerRadius(14)
+                                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(BankTheme.border, lineWidth: 1))
+                                    .foregroundColor(.white)
+                                
+                                Text("Этот номер телефона будет использован для переводов")
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundColor(BankTheme.mint)
+                                    .padding(.leading, 2)
+                            }
+                            
+                            // PIN code
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("ПРИДУМАЙТЕ ПИН-КОД (4 ЦИФРЫ)")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundColor(BankTheme.textMuted)
+                                SecureField("••••", text: $pin1)
+                                    .keyboardType(.numberPad)
+                                    .padding()
+                                    .background(BankTheme.bgCard)
+                                    .cornerRadius(14)
+                                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(BankTheme.border, lineWidth: 1))
+                                    .foregroundColor(.white)
+                            }
+                            
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("ПОВТОРИТЕ ПИН-КОД")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundColor(BankTheme.textMuted)
+                                SecureField("••••", text: $pin2)
+                                    .keyboardType(.numberPad)
+                                    .padding()
+                                    .background(BankTheme.bgCard)
+                                    .cornerRadius(14)
+                                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(BankTheme.border, lineWidth: 1))
+                                    .foregroundColor(.white)
+                            }
+                            
+                            // Telegram username
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("ЮЗЕРНЕЙМ В TELEGRAM")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundColor(BankTheme.textMuted)
+                                
+                                TextField("@username", text: $telegram)
+                                    .textInputAutocapitalization(.never)
+                                    .autocorrectionDisabled(true)
+                                    .padding()
+                                    .background(BankTheme.bgCard)
+                                    .cornerRadius(14)
+                                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(BankTheme.border, lineWidth: 1))
+                                    .foregroundColor(.white)
+                                
+                                Text("Чтобы мы могли связаться с вами после рассмотрения заявки")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(BankTheme.textMuted)
+                                    .padding(.leading, 2)
+                            }
                         }
                         
                         if !errorMessage.isEmpty {
                             Text(errorMessage)
                                 .font(.system(size: 13, weight: .semibold))
                                 .foregroundColor(BankTheme.danger)
+                                .padding(.horizontal)
                         }
                         
-                        Button(action: submitRegister) {
-                            if isLoading {
-                                ProgressView().tint(.black)
-                            } else {
-                                Text("Открыть счёт (+1 000 ₽)")
-                                    .font(.system(size: 16, weight: .bold))
-                                    .foregroundColor(.black)
+                        // Submit button
+                        if #available(iOS 26.0, *) {
+                            Button(action: submitApplication) {
+                                HStack {
+                                    if isLoading {
+                                        ProgressView().tint(.white)
+                                    } else {
+                                        Image(systemName: "paperplane.fill")
+                                        Text("Оставить заявку")
+                                            .font(.system(size: 16, weight: .bold))
+                                    }
+                                }
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
                             }
+                            .buttonStyle(.glass)
+                            .disabled(isLoading)
+                            .padding(.top, 8)
+                        } else {
+                            Button(action: submitApplication) {
+                                HStack {
+                                    if isLoading {
+                                        ProgressView().tint(.black)
+                                    } else {
+                                        Image(systemName: "paperplane.fill")
+                                        Text("Оставить заявку")
+                                            .font(.system(size: 16, weight: .bold))
+                                    }
+                                }
+                                .foregroundColor(.black)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
+                                .background(BankTheme.mint)
+                                .cornerRadius(16)
+                            }
+                            .disabled(isLoading)
+                            .padding(.top, 8)
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(BankTheme.mint)
-                        .cornerRadius(16)
-                        .padding(.top, 10)
-                        .disabled(isLoading)
                     }
                     .padding(20)
                 }
             }
-            .navigationTitle("Регистрация")
+            .navigationTitle("Заявка на открытие")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -472,13 +561,20 @@ struct RegisterSheetView: View {
                         .foregroundColor(BankTheme.mint)
                 }
             }
+            .alert("Заявка принята!", isPresented: $showSuccessAlert) {
+                Button("Понятно", role: .cancel) {
+                    dismiss()
+                }
+            } message: {
+                Text(successMessage)
+            }
         }
     }
     
     private func formField(title: String, placeholder: String, text: Binding<String>) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
-                .font(.system(size: 12, weight: .bold))
+                .font(.system(size: 11, weight: .bold))
                 .foregroundColor(BankTheme.textMuted)
             TextField(placeholder, text: text)
                 .padding()
@@ -489,17 +585,30 @@ struct RegisterSheetView: View {
         }
     }
     
-    private func submitRegister() {
-        guard !name.isEmpty, !phone.isEmpty else {
-            errorMessage = "Заполните имя и телефон"
+    private func submitApplication() {
+        let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanSurname = surname.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanPhone = phone.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanTg = telegram.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        guard !cleanName.isEmpty else {
+            errorMessage = "Укажите ваше имя"
+            return
+        }
+        guard cleanPhone.count >= 10 else {
+            errorMessage = "Укажите корректный номер телефона"
             return
         }
         guard pin1 == pin2 else {
             errorMessage = "ПИН-коды не совпадают"
             return
         }
-        guard pin1.count == 4 else {
-            errorMessage = "ПИН-код должен содержать 4 цифры"
+        guard pin1.count == 4 && pin1.allSatisfy({ $0.isNumber }) else {
+            errorMessage = "ПИН-код должен содержать ровно 4 цифры"
+            return
+        }
+        guard !cleanTg.isEmpty else {
+            errorMessage = "Укажите юзернейм в Telegram для связи"
             return
         }
         
@@ -508,26 +617,30 @@ struct RegisterSheetView: View {
         
         Task {
             do {
-                let user = try await APIService.shared.register(
-                    name: name,
-                    surname: surname,
-                    phone: phone,
-                    pin: pin1
+                let res = try await APIService.shared.submitApplication(
+                    name: cleanName,
+                    surname: cleanSurname,
+                    phone: cleanPhone,
+                    pin: pin1,
+                    telegram: cleanTg
                 )
                 await MainActor.run {
                     isLoading = false
-                    dismiss()
-                    onSuccess(user)
+                    successMessage = res.message ?? "Ваша заявка успешно отправлена! Мы свяжемся с вами в Telegram после рассмотрения."
+                    UINotificationFeedbackGenerator().notificationOccurred(.success)
+                    showSuccessAlert = true
                 }
             } catch {
                 await MainActor.run {
                     isLoading = false
+                    UINotificationFeedbackGenerator().notificationOccurred(.error)
                     errorMessage = error.localizedDescription
                 }
             }
         }
     }
 }
+
 
 // MARK: - Вспомогательный ярлык для кнопки ПИН-пада
 struct PinKeyLabel: View {

@@ -139,3 +139,28 @@ struct ContactClientInfo: Codable {
     }
 }
 
+// MARK: - Bank Status / Story Model
+struct BankStatus: Codable, Identifiable, Equatable {
+    let id: Int
+    let title: String?
+    let text: String?
+    let media_url: String
+    let media_type: String // "photo" or "video"
+    let duration: Int? // default 10 seconds for photo
+    let target_platform: String? // "all", "ios", "android"
+    let views_count: Int?
+    let created_at: String?
+}
+
+struct StatusesResponse: Codable {
+    let success: Bool
+    let statuses: [BankStatus]
+}
+
+// MARK: - Application Response
+struct ApplicationResponse: Codable {
+    let success: Bool
+    let message: String?
+    let application_id: Int?
+}
+

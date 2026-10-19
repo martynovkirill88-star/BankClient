@@ -11,6 +11,45 @@ struct DashboardView: View {
     @State private var showTransferSheet: Bool = false
     @State private var showAtmSheet: Bool = false
     @State private var isBalanceHidden: Bool = false
+    @State private var showBleUpcomingAlert: Bool = false
+    
+    // Statuses / Stories State
+    @State private var statuses: [BankStatus] = []
+    @State private var selectedStatusForViewer: BankStatus? = nil
+    @AppStorage("viewed_statuses_ids") private var viewedStatusesCSV: String = ""
+    
+    var viewedIdsSet: Set<Int> {
+        let items = viewedStatusesCSV.split(separator: ",").compactMap { Int($0.trimmingCharacters(in: .whitespaces)) }
+        return Set(items)
+    }
+    
+    var sortedStatuses: [BankStatus] {
+        let unviewed = statuses.filter { !viewedIdsSet.contains($0.id) }
+        let viewed = statuses.filter { viewedIdsSet.contains($0.id) }
+        return unviewed + viewed
+    }
+    
+    func markStatusAsViewed(_ id: Int) {
+        var set = viewedIdsSet
+        if !set.contains(id) {
+            set.insert(id)
+            viewedStatusesCSV = set.map(String.init).joined(separator: ",")
+            APIService.shared.recordStatusView(statusId: id)
+        }
+    }
+    
+    func loadStatuses() {
+        Task {
+            do {
+                let fetched = try await APIService.shared.fetchStatuses(platform: "ios")
+                await MainActor.run {
+                    self.statuses = fetched
+                }
+            } catch {
+                print("Error loading statuses: \(error)")
+            }
+        }
+    }
     
     var hasFaceBiometrics: Bool {
         guard let user = currentUser else { return false }
@@ -51,6 +90,23 @@ struct DashboardView: View {
                 BluetoothAtmView(currentUser: user)
             }
         }
+        .fullScreenCover(item: $selectedStatusForViewer) { initialStatus in
+            StoryViewer(
+                initialStatus: initialStatus,
+                statuses: sortedStatuses,
+                onStatusViewed: { viewedId in
+                    markStatusAsViewed(viewedId)
+                },
+                onDismiss: {
+                    selectedStatusForViewer = nil
+                }
+            )
+        }
+        .alert("Скоро будет доступно", isPresented: $showBleUpcomingAlert) {
+            Button("Понятно", role: .cancel) { }
+        } message: {
+            Text("Бесконтактный вход по Bluetooth скоро появится в приложении банка RoPay.")
+        }
         .onAppear {
             NotificationManager.shared.requestPermission()
             if let user = currentUser {
@@ -58,6 +114,7 @@ struct DashboardView: View {
             }
             btManager.startScanning()
             loadTransactions()
+            loadStatuses()
         }
         .onDisappear {
             APIService.shared.stopTransactionNotifications()
@@ -103,6 +160,25 @@ struct DashboardView: View {
                             userInitial: userInitial,
                             userName: currentUser?.fullName ?? "Клиент"
                         )
+                        
+                        // ── Stories / Statuses Bar ────────────────────────
+                        if !statuses.isEmpty {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 12) {
+                                    ForEach(sortedStatuses) { status in
+                                        StatusSquareItem(
+                                            status: status,
+                                            isViewed: viewedIdsSet.contains(status.id),
+                                            onTap: {
+                                                selectedStatusForViewer = status
+                                            }
+                                        )
+                                    }
+                                }
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 2)
+                            }
+                        }
                         
                         // ── Phone Number Card ─────────────────────────────
                         HStack {
@@ -168,7 +244,7 @@ struct DashboardView: View {
                                     }
                                     .buttonStyle(.glass)
                                     
-                                    Button(action: { showAtmSheet = true }) {
+                                    Button(action: { showBleUpcomingAlert = true }) {
                                         HStack {
                                             Image(systemName: "bolt.fill")
                                             Text("В банкомат")
@@ -191,7 +267,7 @@ struct DashboardView: View {
                                         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
                                         .foregroundColor(.white)
                                     }
-                                    Button(action: { showAtmSheet = true }) {
+                                    Button(action: { showBleUpcomingAlert = true }) {
                                         HStack {
                                             Image(systemName: "bolt.fill")
                                             Text("В банкомат")
@@ -211,37 +287,14 @@ struct DashboardView: View {
                         
                         // ── Bluetooth Banner ──────────────────────────────
                         if #available(iOS 26.0, *) {
-                            Button(action: { showAtmSheet = true }) {
+                            Button(action: { showBleUpcomingAlert = true }) {
                                 BtBannerContent(btManager: btManager)
                             }
                             .buttonStyle(.glass)
                             .padding(.horizontal, 20)
                         } else {
-                            Button(action: { showAtmSheet = true }) {
+                            Button(action: { showBleUpcomingAlert = true }) {
                                 BtBannerContent(btManager: btManager)
-                            }
-                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
-                            .padding(.horizontal, 20)
-                        }
-                        
-                        // ── Face ID Banner ────────────────────────────────
-                        if #available(iOS 26.0, *) {
-                            Button(action: {
-                                withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                                    selectedTab = 2
-                                }
-                            }) {
-                                FaceIDBannerContent(hasFaceBiometrics: hasFaceBiometrics)
-                            }
-                            .buttonStyle(.glass)
-                            .padding(.horizontal, 20)
-                        } else {
-                            Button(action: {
-                                withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                                    selectedTab = 2
-                                }
-                            }) {
-                                FaceIDBannerContent(hasFaceBiometrics: hasFaceBiometrics)
                             }
                             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
                             .padding(.horizontal, 20)

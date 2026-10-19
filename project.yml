@@ -23,6 +23,7 @@ targets:
       - path: LiquidGlassAmountView.swift
       - path: BluetoothAtmView.swift
       - path: SettingsView.swift
+      - path: StoryViews.swift
       - path: Assets.xcassets
       - path: RoPayLogo.png
     info:

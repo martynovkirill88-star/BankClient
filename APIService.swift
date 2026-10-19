@@ -337,4 +337,54 @@ class APIService: ObservableObject {
             }
         }
     }
+    
+    // MARK: - Submit Registration Application
+    func submitApplication(name: String, surname: String, phone: String, pin: String, telegram: String) async throws -> ApplicationResponse {
+        guard let url = URL(string: "\(cleanBaseURL)/api/client/application") else {
+            throw URLError(.badURL)
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = [
+            "name": name,
+            "surname": surname,
+            "phone": phone,
+            "pin": pin,
+            "telegram": telegram
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
+        let res = try JSONDecoder().decode(ApplicationResponse.self, from: data)
+        guard res.success else {
+            throw NSError(domain: "APIService", code: 1, userInfo: [NSLocalizedDescriptionKey: res.message ?? "Ошибка отправки заявки"])
+        }
+        return res
+    }
+    
+    // MARK: - Fetch Statuses / Stories
+    func fetchStatuses(platform: String = "ios") async throws -> [BankStatus] {
+        guard let url = URL(string: "\(cleanBaseURL)/api/statuses?platform=\(platform)") else {
+            throw URLError(.badURL)
+        }
+        let (data, response) = try await URLSession.shared.data(from: url)
+        guard let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
+        let res = try JSONDecoder().decode(StatusesResponse.self, from: data)
+        return res.statuses
+    }
+    
+    // MARK: - Record Status View
+    func recordStatusView(statusId: Int) {
+        guard let url = URL(string: "\(cleanBaseURL)/api/statuses/\(statusId)/view") else { return }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        URLSession.shared.dataTask(with: req).resume()
+    }
 }
+
