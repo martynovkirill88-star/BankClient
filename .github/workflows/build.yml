@@ -70,9 +70,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/heads/main')
         with:
-          tag_name: v1.0.11
-          name: "RoPay iOS v1.0.11 (Push Notifications & Instant ATM Proximity)"
-          body: "RoPay v1.0.11: Всплывающие Push-уведомления при снятии и внесении денег в банкомате, автоматическое бесконтактное подключение к банкомату без ручного ввода цифр, фоновые режимы Bluetooth."
+          tag_name: v1.0.12
+          name: "RoPay iOS v1.0.12 (Strict Proximity, Contacts Transfer & Liquid Glass UI)"
+          body: "RoPay v1.0.12: Строгая дистанция входа в банкомат (только вплотную к экрану), реальное обновление статуса банкомата без закрытия окна, перевод контактам из записной книжки с проверкой наличия счёта в RoPay, дизайн суммы перевода Liquid Glass (жидкое стекло) с кнопками шага +/- 1 ₽."
           files: build/ClientBank.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

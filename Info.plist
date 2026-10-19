@@ -17,9 +17,9 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0.11</string>
+	<string>1.0.12</string>
 	<key>CFBundleVersion</key>
-	<string>11</string>
+	<string>12</string>
 	<key>CFBundleIcons</key>
 	<dict>
 		<key>CFBundlePrimaryIcon</key>
@@ -73,6 +73,8 @@
 	<string>Используется для быстрого и безопасного входа в банк по Face ID.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Используется для биометрической верификации лица.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>Приложение использует контакты для быстрого перевода средств клиентам банка RoPay.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>

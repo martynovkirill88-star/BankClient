@@ -14,7 +14,7 @@ struct BluetoothAtmView: View {
     @State private var radarPulse: Bool = false
     @State private var showManualInput: Bool = false
     
-    private let pollTimer = Timer.publish(every: 1.2, on: .main, in: .common).autoconnect()
+    private let pollTimer = Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()
     
     var activeCode: String {
         btManager.detectedAtmCode ?? manualCode
@@ -24,10 +24,8 @@ struct BluetoothAtmView: View {
         if !manualCode.isEmpty && manualCode.count == 6 {
             return true
         }
-        if !activeCode.isEmpty {
-            return true
-        }
-        return btManager.isVeryClose || btManager.isAtmNearby
+        // Strict Proximity: Must be touching the screen (RSSI >= -50 dBm) AND have code
+        return btManager.isVeryClose && !activeCode.isEmpty
     }
     
     var body: some View {
@@ -121,9 +119,12 @@ struct BluetoothAtmView: View {
                                     if canConfirm {
                                         Image(systemName: "bolt.fill")
                                         Text("Войти в банкомат (Нажмите)")
-                                    } else {
+                                    } else if !activeCode.isEmpty && !btManager.isVeryClose {
                                         Image(systemName: "hand.tap.fill")
-                                        Text("Поднесите телефон к экрану...")
+                                        Text("Поднесите вплотную к экрану")
+                                    } else {
+                                        Image(systemName: "wave.3.forward.circle")
+                                        Text("Поиск банкомата рядом...")
                                     }
                                 }
                                 .font(.system(size: 16, weight: .bold))
@@ -175,6 +176,7 @@ struct BluetoothAtmView: View {
                 }
             }
             .onReceive(pollTimer) { _ in
+                btManager.checkLiveness()
                 btManager.restartScanIfNeeded()
                 checkActiveAtm()
             }
@@ -187,6 +189,7 @@ struct BluetoothAtmView: View {
             .onDisappear {
                 btManager.stopScanning()
                 btManager.stopAdvertising()
+                btManager.resetDetection()
             }
             .alert("Вход в банкомат", isPresented: $showAlert) {
                 Button("ОК") {
@@ -201,10 +204,9 @@ struct BluetoothAtmView: View {
     private func checkActiveAtm() {
         Task {
             do {
-                if let serverCode = try await APIService.shared.fetchActiveAtmCode(), serverCode.count == 6 {
-                    await MainActor.run {
-                        btManager.markReadyForLogin(code: serverCode)
-                    }
+                let serverCode = try await APIService.shared.fetchActiveAtmCode()
+                await MainActor.run {
+                    btManager.setServerActiveCode(serverCode)
                 }
             } catch {}
         }

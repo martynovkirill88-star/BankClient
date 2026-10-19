@@ -120,3 +120,22 @@ struct BiometricsResponse: Codable {
     let user: User?
     let message: String?
 }
+
+struct CheckContactsResponse: Codable {
+    let status: String
+    let clients: [String: ContactClientInfo]
+}
+
+struct ContactClientInfo: Codable {
+    let id: Int
+    let name: String
+    let surname: String?
+    let phone: String
+    let is_client: Bool?
+    
+    var fullName: String {
+        let sur = surname ?? ""
+        return sur.isEmpty ? name : "\(name) \(sur)"
+    }
+}
+

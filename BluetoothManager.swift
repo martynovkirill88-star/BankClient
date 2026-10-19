@@ -18,6 +18,7 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate, CB
     @Published var detectedAtmName: String = ""
     @Published var currentRssi: Int = -100
     @Published var proximityText: String = "Поиск банкомата..."
+    @Published var lastPacketTime: Date? = nil
     
     private var centralManager: CBCentralManager?
     private var peripheralManager: CBPeripheralManager?
@@ -119,17 +120,21 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate, CB
         isScanning = false
     }
     
-    func markReadyForLogin(code: String? = nil) {
+    func checkLiveness() {
+        if let last = lastPacketTime, Date().timeIntervalSince(last) > 2.2 {
+            isAtmNearby = false
+            isVeryClose = false
+            currentRssi = -100
+            hasTriggeredHaptic = false
+            proximityText = "Поиск банкомата RoPay..."
+        }
+    }
+    
+    func setServerActiveCode(_ code: String?) {
         if let code = code, isValidAtmCode(code) {
             detectedAtmCode = code
-        }
-        isAtmNearby = true
-        isVeryClose = true
-        proximityText = "Банкомат RoPay рядом! Готово к входу"
-        if !hasTriggeredHaptic {
-            hasTriggeredHaptic = true
-            let generator = UIImpactFeedbackGenerator(style: .heavy)
-            generator.impactOccurred()
+        } else if code == nil && !isAtmNearby {
+            detectedAtmCode = nil
         }
     }
     
@@ -139,6 +144,7 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate, CB
         detectedAtmCode = nil
         detectedAtmName = ""
         currentRssi = -100
+        lastPacketTime = nil
         hasTriggeredHaptic = false
         lastRestartTime = Date()
         proximityText = "Ожидание банкомата..."
@@ -221,23 +227,33 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate, CB
         }
         
         if isAtmDevice {
+            lastPacketTime = Date()
             if let code = foundCode {
                 detectedAtmCode = code
             }
             detectedAtmName = name.isEmpty ? "Банкомат RoPay" : name
-            isAtmNearby = true
             
-            // Proximity range (<= 25cm is RSSI >= -68 dBm)
-            if rssiValue >= -68 {
+            // STRICT PROXIMITY:
+            // Direct touching distance (<= 10 cm directly against tablet screen) requires RSSI >= -50 dBm
+            if rssiValue >= -50 {
                 isVeryClose = true
-                proximityText = "Банкомат рядом! (\(rssiValue) dBm)"
+                isAtmNearby = true
+                proximityText = "Банкомат вплотную (\(rssiValue) dBm) — нажмите для входа"
                 if !hasTriggeredHaptic {
                     hasTriggeredHaptic = true
                     let generator = UIImpactFeedbackGenerator(style: .heavy)
                     generator.impactOccurred()
                 }
+            } else if rssiValue >= -70 {
+                isVeryClose = false
+                isAtmNearby = true
+                hasTriggeredHaptic = false
+                proximityText = "Банкомат обнаружен (\(rssiValue) dBm). Поднесите вплотную!"
             } else {
-                proximityText = "Поднесите iPhone вплотную к экрану (\(rssiValue) dBm)"
+                isVeryClose = false
+                isAtmNearby = false
+                hasTriggeredHaptic = false
+                proximityText = "Слишком далеко (\(rssiValue) dBm). Подойдите вплотную"
             }
         }
     }

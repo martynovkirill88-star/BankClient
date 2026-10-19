@@ -223,17 +223,42 @@ class APIService: ObservableObject {
         return (user: user, message: res.message ?? "Биометрия успешно подключена!")
     }
     
-    // MARK: - Fetch Active ATM Code (Fallback/Auto-pairing)
+    // MARK: - Fetch Active ATM Code (Live polling with cache-busting)
     func fetchActiveAtmCode() async throws -> String? {
-        guard let url = URL(string: "\(cleanBaseURL)/api/atm/active_code") else {
+        let ts = Int(Date().timeIntervalSince1970 * 1000)
+        guard let url = URL(string: "\(cleanBaseURL)/api/atm/active_code?_t=\(ts)") else {
             throw URLError(.badURL)
         }
-        let (data, response) = try await URLSession.shared.data(from: url)
+        var request = URLRequest(url: url)
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        request.timeoutInterval = 2.0
+        let (data, response) = try await URLSession.shared.data(for: request)
         guard let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200 else {
             throw URLError(.badServerResponse)
         }
         let res = try JSONDecoder().decode(AtmActiveCodeResponse.self, from: data)
         return res.code
+    }
+    
+    // MARK: - Batch Check Contacts
+    func checkContacts(phones: [String]) async throws -> [String: ContactClientInfo] {
+        guard let url = URL(string: "\(cleanBaseURL)/api/client/check_contacts") else {
+            throw URLError(.badURL)
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 5.0
+        
+        let body = ["phones": phones]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
+        let res = try JSONDecoder().decode(CheckContactsResponse.self, from: data)
+        return res.clients
     }
     
     // MARK: - Real-time WebSocket Notifications

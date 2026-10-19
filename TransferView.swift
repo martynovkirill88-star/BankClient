@@ -11,6 +11,7 @@ struct TransferView: View {
     @State private var amountString: String = ""
     @State private var isLoading: Bool = false
     @State private var errorMessage: String = ""
+    @State private var showContactsPicker: Bool = false
     
     let quickAmounts = [100, 500, 1000, 3000, 5000]
     
@@ -20,30 +21,72 @@ struct TransferView: View {
                 BankTheme.bgDark.ignoresSafeArea()
                 
                 ScrollView {
-                    VStack(spacing: 20) {
-                        // Recipient Phone Input
+                    VStack(spacing: 22) {
+                        // Contact Picker Shortcut Button
+                        Button(action: { showContactsPicker = true }) {
+                            HStack(spacing: 12) {
+                                ZStack {
+                                    Circle()
+                                        .fill(BankTheme.purpleGradient)
+                                        .frame(width: 40, height: 40)
+                                    Image(systemName: "person.crop.circle.badge.plus")
+                                        .font(.system(size: 19))
+                                        .foregroundColor(.white)
+                                }
+                                
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text("Перевод контактам")
+                                        .font(.system(size: 15, weight: .bold))
+                                        .foregroundColor(.white)
+                                    Text("Выбрать из телефонной книги (проверка в RoPay)")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(BankTheme.textMuted)
+                                }
+                                
+                                Spacer()
+                                
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 13, weight: .bold))
+                                    .foregroundColor(BankTheme.textMuted)
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                            .background(BankTheme.bgCard)
+                            .cornerRadius(16)
+                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(BankTheme.mint.opacity(0.3), lineWidth: 1))
+                        }
+                        
+                        // Recipient Phone Input Field
                         VStack(alignment: .leading, spacing: 8) {
                             Text("НОМЕР ТЕЛЕФОНА ПОЛУЧАТЕЛЯ")
                                 .font(.system(size: 12, weight: .bold))
                                 .foregroundColor(BankTheme.textMuted)
                             
-                            TextField("+7 999 123-45-67", text: $recipientPhone)
-                                .font(.system(size: 18, weight: .bold))
-                                .foregroundColor(.white)
-                                .keyboardType(.phonePad)
-                                .padding()
-                                .background(BankTheme.bgCard)
-                                .cornerRadius(16)
-                                .overlay(RoundedRectangle(cornerRadius: 16).stroke(BankTheme.border, lineWidth: 1))
-                                .onChange(of: recipientPhone) { newValue in
-                                    lookupRecipient(phone: newValue)
+                            HStack {
+                                TextField("+7 999 123-45-67", text: $recipientPhone)
+                                    .font(.system(size: 18, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .keyboardType(.phonePad)
+                                    .onChange(of: recipientPhone) { newValue in
+                                        lookupRecipient(phone: newValue)
+                                    }
+                                
+                                Button(action: { showContactsPicker = true }) {
+                                    Image(systemName: "person.crop.circle")
+                                        .font(.system(size: 22))
+                                        .foregroundColor(BankTheme.mint)
                                 }
+                            }
+                            .padding()
+                            .background(BankTheme.bgCard)
+                            .cornerRadius(16)
+                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(BankTheme.border, lineWidth: 1))
                             
                             // Recipient Verified Pill
                             if isLookingUp {
                                 HStack(spacing: 8) {
                                     ProgressView().tint(BankTheme.mint)
-                                    Text("Поиск клиента...")
+                                    Text("Поиск клиента в RoPay...")
                                         .font(.system(size: 13))
                                         .foregroundColor(BankTheme.textMuted)
                                 }
@@ -64,20 +107,22 @@ struct TransferView: View {
                             }
                         }
                         
-                        // Transfer Amount
+                        // Transfer Amount with Liquid Glass & +/- 1 ₽ Stepper
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("СУММА ПЕРЕВОДА (₽)")
-                                .font(.system(size: 12, weight: .bold))
-                                .foregroundColor(BankTheme.textMuted)
+                            HStack {
+                                Text("СУММА ПЕРЕВОДА")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundColor(BankTheme.textMuted)
+                                
+                                Spacer()
+                                
+                                Text("Баланс: \(currentUser.formattedBalance)")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundColor(BankTheme.mint)
+                            }
                             
-                            TextField("0 ₽", text: $amountString)
-                                .font(.system(size: 26, weight: .black))
-                                .foregroundColor(.white)
-                                .keyboardType(.numberPad)
-                                .padding()
-                                .background(BankTheme.bgCard)
-                                .cornerRadius(16)
-                                .overlay(RoundedRectangle(cornerRadius: 16).stroke(BankTheme.border, lineWidth: 1))
+                            // Liquid Glass Container with Stepper
+                            LiquidGlassAmountView(amountString: $amountString)
                         }
                         
                         // Quick Amount Chips
@@ -89,7 +134,7 @@ struct TransferView: View {
                                         gen.impactOccurred()
                                         amountString = "\(amt)"
                                     }) {
-                                        Text("\(amt) ₽")
+                                        Text("+\(amt) ₽")
                                             .font(.system(size: 14, weight: .bold))
                                             .foregroundColor(.white)
                                             .padding(.horizontal, 16)
@@ -128,12 +173,19 @@ struct TransferView: View {
                     .padding(20)
                 }
             }
-            .navigationTitle("Перевод по номеру")
+            .navigationTitle("Перевод клиенту")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Отмена") { dismiss() }
                         .foregroundColor(BankTheme.mint)
+                }
+            }
+            .sheet(isPresented: $showContactsPicker) {
+                ContactsPickerView { phone, name in
+                    recipientPhone = phone
+                    recipientName = name
+                    lookupRecipient(phone: phone)
                 }
             }
         }
