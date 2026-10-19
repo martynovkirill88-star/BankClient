@@ -70,9 +70,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/heads/main')
         with:
-          tag_name: v1.0.13
-          name: "RoPay iOS v1.0.13 (Native Rolling Digits & Calibrated Proximity -64 dBm)"
-          body: "RoPay v1.0.13: Штатная плавная анимация переката цифр (.numericText) как в iOS App при шаге ±1 ₽, калибровка дистанции банкомата (вход доступен при -50...-64 dBm прямо у экрана)."
+          tag_name: v1.0.14
+          name: "RoPay iOS v1.0.14 (Multi-iPhone Isolation & Reliable Screen Proximity -70 dBm)"
+          body: "RoPay v1.0.14: Полная изоляция от других iPhone (телефоны больше не перебивают сигнал друг друга), надёжный порог входа -70 dBm прямо у экрана планшета со сглаживанием RSSI."
           files: build/ClientBank.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

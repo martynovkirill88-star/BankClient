@@ -47,25 +47,10 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate, CB
         peripheralManager = CBPeripheralManager(delegate: self, queue: .main)
     }
     
-    // MARK: - BLE Beacon Advertising (iPhone -> Tablet)
+    // MARK: - BLE Beacon Advertising (Disabled to eliminate inter-device conflicts)
     func startAdvertising(userId: Int) {
-        currentUserIdToAdvertise = userId
-        if peripheralManager == nil {
-            setupPeripheralManager()
-        } else if peripheralManager?.state == .poweredOn {
-            actuallyStartAdvertising(userId: userId)
-        }
-    }
-    
-    private func actuallyStartAdvertising(userId: Int) {
-        guard peripheralManager?.state == .poweredOn else { return }
-        let advData: [String: Any] = [
-            CBAdvertisementDataServiceUUIDsKey: [BluetoothManager.atmServiceUUID],
-            CBAdvertisementDataLocalNameKey: "RoPay-Client-\(userId)"
-        ]
-        peripheralManager?.stopAdvertising()
-        peripheralManager?.startAdvertising(advData)
-        isAdvertising = true
+        // No-op: ATM is the broadcaster; iPhones only scan.
+        isAdvertising = false
     }
     
     func stopAdvertising() {
@@ -185,9 +170,15 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate, CB
     
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String: Any], rssi RSSI: NSNumber) {
         let rssiValue = RSSI.intValue
-        currentRssi = rssiValue
+        guard rssiValue < 0 else { return }
         
         let name = peripheral.name ?? (advertisementData[CBAdvertisementDataLocalNameKey] as? String) ?? ""
+        
+        // CRITICAL: Completely ignore other client iPhones to prevent cross-device conflicts!
+        if name.contains("Client") {
+            return
+        }
+        
         var foundCode: String? = nil
         
         if name.hasPrefix("RoPay-") {
@@ -213,48 +204,45 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate, CB
             }
         }
         
-        var isAtmDevice = (foundCode != nil)
-        if !isAtmDevice, let serviceUUIDs = advertisementData[CBAdvertisementDataServiceUUIDsKey] as? [CBUUID] {
-            for uuid in serviceUUIDs {
-                if uuid == BluetoothManager.atmServiceUUID || uuid.uuidString.contains("FFF0") {
-                    isAtmDevice = true
-                    break
-                }
-            }
-        }
-        if !isAtmDevice && (name.hasPrefix("RoPay") || name.hasPrefix("ATM")) {
-            isAtmDevice = true
+        // An active ATM MUST advertise a valid 6-digit session code!
+        guard let code = foundCode else {
+            return
         }
         
-        if isAtmDevice {
-            lastPacketTime = Date()
-            if let code = foundCode {
-                detectedAtmCode = code
+        lastPacketTime = Date()
+        detectedAtmCode = code
+        detectedAtmName = "Банкомат RoPay"
+        
+        // Smooth RSSI to prevent rapid signal drops
+        if currentRssi == -100 {
+            currentRssi = rssiValue
+        } else {
+            currentRssi = max(rssiValue, Int(Double(currentRssi) * 0.35 + Double(rssiValue) * 0.65))
+        }
+        
+        // PROXIMITY CALIBRATION:
+        // Placing phone directly on tablet screen yields -50 to -68 dBm.
+        // Threshold: >= -70 dBm confirms touch / direct frontal proximity.
+        // Across the room or >1.5m away, RSSI drops to -78...-95 dBm.
+        if currentRssi >= -70 {
+            isVeryClose = true
+            isAtmNearby = true
+            proximityText = "Банкомат вплотную (\(currentRssi) dBm) — нажмите для входа"
+            if !hasTriggeredHaptic {
+                hasTriggeredHaptic = true
+                let generator = UIImpactFeedbackGenerator(style: .heavy)
+                generator.impactOccurred()
             }
-            detectedAtmName = name.isEmpty ? "Банкомат RoPay" : name
-            
-            // PROXIMITY CALIBRATION:
-            // Direct touch / in front of screen: RSSI is -50 dBm to -62 dBm (threshold >= -64 dBm)
-            if rssiValue >= -64 {
-                isVeryClose = true
-                isAtmNearby = true
-                proximityText = "Банкомат вплотную (\(rssiValue) dBm) — нажмите для входа"
-                if !hasTriggeredHaptic {
-                    hasTriggeredHaptic = true
-                    let generator = UIImpactFeedbackGenerator(style: .heavy)
-                    generator.impactOccurred()
-                }
-            } else if rssiValue >= -74 {
-                isVeryClose = false
-                isAtmNearby = true
-                hasTriggeredHaptic = false
-                proximityText = "Банкомат рядом (\(rssiValue) dBm). Подойдите вплотную!"
-            } else {
-                isVeryClose = false
-                isAtmNearby = false
-                hasTriggeredHaptic = false
-                proximityText = "Слишком далеко (\(rssiValue) dBm). Подойдите к экрану"
-            }
+        } else if currentRssi >= -78 {
+            isVeryClose = false
+            isAtmNearby = true
+            hasTriggeredHaptic = false
+            proximityText = "Банкомат рядом (\(currentRssi) dBm). Поднесите к экрану"
+        } else {
+            isVeryClose = false
+            isAtmNearby = false
+            hasTriggeredHaptic = false
+            proximityText = "Слишком далеко (\(currentRssi) dBm). Подойдите к экрану"
         }
     }
 }

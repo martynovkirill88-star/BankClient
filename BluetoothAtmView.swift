@@ -183,12 +183,10 @@ struct BluetoothAtmView: View {
             .onAppear {
                 radarPulse = true
                 btManager.startScanning()
-                btManager.startAdvertising(userId: currentUser.id)
                 checkActiveAtm()
             }
             .onDisappear {
                 btManager.stopScanning()
-                btManager.stopAdvertising()
                 btManager.resetDetection()
             }
             .alert("Вход в банкомат", isPresented: $showAlert) {
