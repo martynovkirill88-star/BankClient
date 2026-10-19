@@ -81,6 +81,7 @@ extension UIImage {
 struct SettingsView: View {
     @Binding var currentUser: User?
     var onLogout: () -> Void
+    var isEmbedded: Bool = false
     @Environment(\.dismiss) private var dismiss
     
     @AppStorage("server_base_url") private var serverUrl: String = "http://192.168.1.247:8000"
@@ -369,19 +370,21 @@ struct SettingsView: View {
                                 .padding(.top, 4)
                         }
                         .padding(.horizontal, 20)
-                        .padding(.bottom, 30)
+                        .padding(.bottom, isEmbedded ? 90 : 30)
                     }
                 }
             }
             .navigationTitle("Настройки")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Готово") {
-                        dismiss()
+                if !isEmbedded {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Готово") {
+                            dismiss()
+                        }
+                        .foregroundColor(BankTheme.mint)
+                        .fontWeight(.bold)
                     }
-                    .foregroundColor(BankTheme.mint)
-                    .fontWeight(.bold)
                 }
             }
             .sheet(isPresented: $showCamera) {

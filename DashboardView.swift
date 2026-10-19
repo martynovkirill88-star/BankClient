@@ -1,15 +1,37 @@
 import SwiftUI
 
+enum DashboardTab: Int, CaseIterable {
+    case home = 0
+    case history = 1
+    case settings = 2
+    
+    var title: String {
+        switch self {
+        case .home: return "Главная"
+        case .history: return "История операций"
+        case .settings: return "Настройки"
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .home: return "house.fill"
+        case .history: return "clock.arrow.circlepath"
+        case .settings: return "gearshape.fill"
+        }
+    }
+}
+
 struct DashboardView: View {
     @Binding var currentUser: User?
     var onLock: () -> Void
     
     @StateObject private var btManager = BluetoothManager.shared
+    @State private var selectedTab: DashboardTab = .home
     @State private var transactions: [BankTransaction] = []
     @State private var isLoadingTransactions: Bool = false
     @State private var showTransferSheet: Bool = false
     @State private var showAtmSheet: Bool = false
-    @State private var showSettingsSheet: Bool = false
     @State private var isBalanceHidden: Bool = false
     
     var hasFaceBiometrics: Bool {
@@ -18,38 +40,86 @@ struct DashboardView: View {
     }
     
     var body: some View {
+        ZStack(alignment: .bottom) {
+            BankTheme.bgDark.ignoresSafeArea()
+            
+            // Tab content
+            Group {
+                switch selectedTab {
+                case .home:
+                    homeView
+                case .history:
+                    historyView
+                case .settings:
+                    SettingsView(currentUser: $currentUser, onLogout: onLock, isEmbedded: true)
+                }
+            }
+            
+            // Bottom Glass Navigation Bar
+            bottomTabBar
+        }
+        .sheet(isPresented: $showTransferSheet) {
+            if let user = currentUser {
+                TransferView(currentUser: user, onTransferCompleted: { newBal in
+                    currentUser?.balance = newBal
+                    loadTransactions()
+                })
+            }
+        }
+        .sheet(isPresented: $showAtmSheet) {
+            if let user = currentUser {
+                BluetoothAtmView(currentUser: user)
+            }
+        }
+        .onAppear {
+            NotificationManager.shared.requestPermission()
+            if let user = currentUser {
+                APIService.shared.startTransactionNotifications(userId: user.id)
+            }
+            btManager.startScanning()
+            loadTransactions()
+        }
+        .onDisappear {
+            APIService.shared.stopTransactionNotifications()
+        }
+    }
+    
+    // MARK: - Ambient Light Background
+    private var ambientBackground: some View {
+        ZStack {
+            Circle()
+                .fill(RadialGradient(
+                    colors: [BankTheme.mint.opacity(0.12), Color.clear],
+                    center: .center, startRadius: 10, endRadius: 200
+                ))
+                .frame(width: 350, height: 350)
+                .blur(radius: 55)
+                .offset(x: 100, y: -200)
+            
+            Circle()
+                .fill(RadialGradient(
+                    colors: [BankTheme.purple.opacity(0.18), Color.clear],
+                    center: .center, startRadius: 20, endRadius: 230
+                ))
+                .frame(width: 400, height: 400)
+                .blur(radius: 65)
+                .offset(x: -80, y: 180)
+        }
+        .ignoresSafeArea()
+    }
+    
+    // MARK: - Home Tab View
+    private var homeView: some View {
         NavigationStack {
             ZStack {
                 BankTheme.bgDark.ignoresSafeArea()
-                
-                // Ambient Fluid Light Underlay
-                ZStack {
-                    Circle()
-                        .fill(RadialGradient(
-                            colors: [BankTheme.mint.opacity(0.12), Color.clear],
-                            center: .center, startRadius: 10, endRadius: 200
-                        ))
-                        .frame(width: 350, height: 350)
-                        .blur(radius: 55)
-                        .offset(x: 100, y: -200)
-                    
-                    Circle()
-                        .fill(RadialGradient(
-                            colors: [BankTheme.purple.opacity(0.18), Color.clear],
-                            center: .center, startRadius: 20, endRadius: 230
-                        ))
-                        .frame(width: 400, height: 400)
-                        .blur(radius: 65)
-                        .offset(x: -80, y: 180)
-                }
-                .ignoresSafeArea()
+                ambientBackground
                 
                 ScrollView {
                     VStack(spacing: 20) {
                         
-                        // ── Top Bar ──────────────────────────────────────
+                        // ── Top Bar (Clean: Avatar & Name only) ─────────────
                         HStack(spacing: 14) {
-                            // Avatar
                             ZStack {
                                 Circle()
                                     .fill(BankTheme.mint.opacity(0.15))
@@ -69,15 +139,6 @@ struct DashboardView: View {
                             }
                             
                             Spacer()
-                            
-                            // Refresh, Settings, Lock buttons
-                            HStack(spacing: 10) {
-                                GlassIconButton(icon: "arrow.clockwise", action: refreshData)
-                                GlassIconButton(icon: "gearshape.fill", tint: BankTheme.mint) {
-                                    showSettingsSheet = true
-                                }
-                                GlassIconButton(icon: "lock.fill", action: onLock)
-                            }
                         }
                         .padding(.horizontal, 20)
                         .padding(.top, 10)
@@ -204,25 +265,45 @@ struct DashboardView: View {
                         
                         // ── Face ID Banner ────────────────────────────────
                         if #available(iOS 26.0, *) {
-                            Button(action: { showSettingsSheet = true }) {
+                            Button(action: {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                                    selectedTab = .settings
+                                }
+                            }) {
                                 FaceIDBannerContent(hasFaceBiometrics: hasFaceBiometrics)
                             }
                             .buttonStyle(.glass)
                             .padding(.horizontal, 20)
                         } else {
-                            Button(action: { showSettingsSheet = true }) {
+                            Button(action: {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                                    selectedTab = .settings
+                                }
+                            }) {
                                 FaceIDBannerContent(hasFaceBiometrics: hasFaceBiometrics)
                             }
                             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
                             .padding(.horizontal, 20)
                         }
                         
-                        // ── Transactions ──────────────────────────────────
+                        // ── Recent Transactions Preview ───────────────────
                         VStack(alignment: .leading, spacing: 14) {
-                            Text("История операций")
-                                .font(.system(size: 16, weight: .black))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 20)
+                            HStack {
+                                Text("История операций")
+                                    .font(.system(size: 16, weight: .black))
+                                    .foregroundColor(.white)
+                                Spacer()
+                                Button(action: {
+                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                                        selectedTab = .history
+                                    }
+                                }) {
+                                    Text("Все")
+                                        .font(.system(size: 13, weight: .bold))
+                                        .foregroundColor(BankTheme.mint)
+                                }
+                            }
+                            .padding(.horizontal, 20)
                             
                             if isLoadingTransactions {
                                 ProgressView()
@@ -239,36 +320,11 @@ struct DashboardView: View {
                                         .foregroundColor(BankTheme.textMuted)
                                 }
                                 .frame(maxWidth: .infinity)
-                                .padding(.vertical, 30)
+                                .padding(.vertical, 20)
                             } else {
                                 VStack(spacing: 10) {
-                                    ForEach(transactions) { tx in
-                                        HStack(spacing: 14) {
-                                            ZStack {
-                                                Circle()
-                                                    .fill(tx.isPositive ? BankTheme.mint.opacity(0.12) : BankTheme.bgCardSubtle)
-                                                    .frame(width: 44, height: 44)
-                                                Image(systemName: tx.iconName)
-                                                    .font(.system(size: 18))
-                                                    .foregroundColor(tx.isPositive ? BankTheme.mint : BankTheme.textMuted)
-                                            }
-                                            VStack(alignment: .leading, spacing: 3) {
-                                                Text(tx.title)
-                                                    .font(.system(size: 14, weight: .bold))
-                                                    .foregroundColor(.white)
-                                                if let date = tx.created_at {
-                                                    Text(date)
-                                                        .font(.system(size: 11))
-                                                        .foregroundColor(BankTheme.textMuted)
-                                                }
-                                            }
-                                            Spacer()
-                                            Text(tx.formattedAmount)
-                                                .font(.system(size: 15, weight: .black))
-                                                .foregroundColor(tx.isPositive ? BankTheme.mint : BankTheme.textMuted)
-                                        }
-                                        .padding(14)
-                                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                    ForEach(transactions.prefix(3)) { tx in
+                                        transactionRow(tx)
                                     }
                                 }
                                 .padding(.horizontal, 20)
@@ -276,38 +332,180 @@ struct DashboardView: View {
                         }
                         .padding(.top, 10)
                     }
-                    .padding(.bottom, 30)
+                    .padding(.bottom, 95)
+                }
+                .refreshable {
+                    refreshData()
                 }
             }
             .navigationBarHidden(true)
-            .sheet(isPresented: $showTransferSheet) {
-                if let user = currentUser {
-                    TransferView(currentUser: user, onTransferCompleted: { newBal in
-                        currentUser?.balance = newBal
-                        loadTransactions()
-                    })
+        }
+    }
+    
+    // MARK: - History Tab View
+    private var historyView: some View {
+        NavigationStack {
+            ZStack {
+                BankTheme.bgDark.ignoresSafeArea()
+                ambientBackground
+                
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 18) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("История операций")
+                                .font(.system(size: 28, weight: .black))
+                                .foregroundColor(.white)
+                            Text("Все операции и переводы RoPay")
+                                .font(.system(size: 13))
+                                .foregroundColor(BankTheme.textMuted)
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 16)
+                        
+                        if isLoadingTransactions {
+                            ProgressView()
+                                .tint(BankTheme.mint)
+                                .frame(maxWidth: .infinity, alignment: .center)
+                                .padding(.vertical, 40)
+                        } else if transactions.isEmpty {
+                            VStack(spacing: 12) {
+                                Image(systemName: "tray.fill")
+                                    .font(.system(size: 44))
+                                    .foregroundColor(BankTheme.textMuted)
+                                Text("История операций пока пуста")
+                                    .font(.system(size: 16, weight: .bold))
+                                    .foregroundColor(.white)
+                                Text("Здесь будут отображаться ваши переводы клиентам RoPay")
+                                    .font(.system(size: 13))
+                                    .foregroundColor(BankTheme.textMuted)
+                                    .multilineTextAlignment(.center)
+                                    .padding(.horizontal, 30)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 60)
+                        } else {
+                            VStack(spacing: 10) {
+                                ForEach(transactions) { tx in
+                                    transactionRow(tx)
+                                }
+                            }
+                            .padding(.horizontal, 20)
+                        }
+                    }
+                    .padding(.bottom, 95)
+                }
+                .refreshable {
+                    loadTransactions()
                 }
             }
-            .sheet(isPresented: $showAtmSheet) {
-                if let user = currentUser {
-                    BluetoothAtmView(currentUser: user)
+            .navigationBarHidden(true)
+        }
+    }
+    
+    // MARK: - Transaction Row
+    private func transactionRow(_ tx: BankTransaction) -> some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(tx.isPositive ? BankTheme.mint.opacity(0.12) : BankTheme.bgCardSubtle)
+                    .frame(width: 44, height: 44)
+                Image(systemName: tx.iconName)
+                    .font(.system(size: 18))
+                    .foregroundColor(tx.isPositive ? BankTheme.mint : BankTheme.textMuted)
+            }
+            VStack(alignment: .leading, spacing: 3) {
+                Text(tx.title)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.white)
+                if let date = tx.created_at {
+                    Text(date)
+                        .font(.system(size: 11))
+                        .foregroundColor(BankTheme.textMuted)
                 }
             }
-            .sheet(isPresented: $showSettingsSheet) {
-                SettingsView(currentUser: $currentUser, onLogout: onLock)
-            }
-            .onAppear {
-                NotificationManager.shared.requestPermission()
-                if let user = currentUser {
-                    APIService.shared.startTransactionNotifications(userId: user.id)
+            Spacer()
+            Text(tx.formattedAmount)
+                .font(.system(size: 15, weight: .black))
+                .foregroundColor(tx.isPositive ? BankTheme.mint : BankTheme.textMuted)
+        }
+        .padding(14)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+    
+    // MARK: - Bottom Glass Tab Bar
+    private var bottomTabBar: some View {
+        HStack(spacing: 8) {
+            ForEach(DashboardTab.allCases, id: \.self) { tab in
+                let isSelected = selectedTab == tab
+                
+                if #available(iOS 26.0, *) {
+                    Button(action: {
+                        let gen = UIImpactFeedbackGenerator(style: .light)
+                        gen.impactOccurred()
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                            selectedTab = tab
+                        }
+                    }) {
+                        VStack(spacing: 4) {
+                            Image(systemName: tab.icon)
+                                .font(.system(size: 19, weight: isSelected ? .bold : .medium))
+                            Text(tab.title)
+                                .font(.system(size: 10, weight: isSelected ? .bold : .medium))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                        }
+                        .foregroundColor(isSelected ? BankTheme.mint : BankTheme.textMuted)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                    }
+                    .buttonStyle(.glass)
+                } else {
+                    Button(action: {
+                        let gen = UIImpactFeedbackGenerator(style: .light)
+                        gen.impactOccurred()
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                            selectedTab = tab
+                        }
+                    }) {
+                        VStack(spacing: 4) {
+                            Image(systemName: tab.icon)
+                                .font(.system(size: 19, weight: isSelected ? .bold : .medium))
+                            Text(tab.title)
+                                .font(.system(size: 10, weight: isSelected ? .bold : .medium))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                        }
+                        .foregroundColor(isSelected ? BankTheme.mint : BankTheme.textMuted)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(
+                            isSelected ? BankTheme.mint.opacity(0.12) : Color.clear,
+                            in: RoundedRectangle(cornerRadius: 14)
+                        )
+                    }
                 }
-                btManager.startScanning()
-                loadTransactions()
-            }
-            .onDisappear {
-                APIService.shared.stopTransactionNotifications()
             }
         }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+            .ultraThinMaterial,
+            in: RoundedRectangle(cornerRadius: 24, style: .continuous)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(
+                    LinearGradient(
+                        colors: [.white.opacity(0.35), .white.opacity(0.08), .clear],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+        )
+        .shadow(color: Color.black.opacity(0.35), radius: 15, x: 0, y: 8)
+        .padding(.horizontal, 16)
+        .padding(.bottom, 6)
     }
     
     private var userInitial: String {
@@ -340,33 +538,6 @@ struct DashboardView: View {
                 await MainActor.run { isLoadingTransactions = false; transactions = list }
             } catch {
                 await MainActor.run { isLoadingTransactions = false }
-            }
-        }
-    }
-}
-
-// MARK: - Glass Icon Button (Refresh / Settings / Lock)
-struct GlassIconButton: View {
-    let icon: String
-    var tint: Color = .white
-    let action: () -> Void
-    
-    var body: some View {
-        if #available(iOS 26.0, *) {
-            Button(action: action) {
-                Image(systemName: icon)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(tint)
-                    .frame(width: 40, height: 40)
-            }
-            .buttonStyle(.glass)
-        } else {
-            Button(action: action) {
-                Image(systemName: icon)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(tint)
-                    .padding(10)
-                    .background(.ultraThinMaterial, in: Circle())
             }
         }
     }
