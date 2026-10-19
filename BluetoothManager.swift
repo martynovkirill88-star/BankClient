@@ -233,9 +233,9 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate, CB
             }
             detectedAtmName = name.isEmpty ? "Банкомат RoPay" : name
             
-            // STRICT PROXIMITY:
-            // Direct touching distance (<= 10 cm directly against tablet screen) requires RSSI >= -50 dBm
-            if rssiValue >= -50 {
+            // PROXIMITY CALIBRATION:
+            // Direct touch / in front of screen: RSSI is -50 dBm to -62 dBm (threshold >= -64 dBm)
+            if rssiValue >= -64 {
                 isVeryClose = true
                 isAtmNearby = true
                 proximityText = "Банкомат вплотную (\(rssiValue) dBm) — нажмите для входа"
@@ -244,16 +244,16 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate, CB
                     let generator = UIImpactFeedbackGenerator(style: .heavy)
                     generator.impactOccurred()
                 }
-            } else if rssiValue >= -70 {
+            } else if rssiValue >= -74 {
                 isVeryClose = false
                 isAtmNearby = true
                 hasTriggeredHaptic = false
-                proximityText = "Банкомат обнаружен (\(rssiValue) dBm). Поднесите вплотную!"
+                proximityText = "Банкомат рядом (\(rssiValue) dBm). Подойдите вплотную!"
             } else {
                 isVeryClose = false
                 isAtmNearby = false
                 hasTriggeredHaptic = false
-                proximityText = "Слишком далеко (\(rssiValue) dBm). Подойдите вплотную"
+                proximityText = "Слишком далеко (\(rssiValue) dBm). Подойдите к экрану"
             }
         }
     }

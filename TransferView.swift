@@ -132,7 +132,9 @@ struct TransferView: View {
                                     Button(action: {
                                         let gen = UIImpactFeedbackGenerator(style: .light)
                                         gen.impactOccurred()
-                                        amountString = "\(amt)"
+                                        withAnimation(.spring(response: 0.35, dampingFraction: 0.72)) {
+                                            amountString = "\(amt)"
+                                        }
                                     }) {
                                         Text("+\(amt) ₽")
                                             .font(.system(size: 14, weight: .bold))
