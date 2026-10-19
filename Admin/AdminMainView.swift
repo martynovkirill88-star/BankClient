@@ -33,8 +33,6 @@ struct AdminCustomTabBar: View {
     @Binding var selectedTab: Int
     var onLogout: () -> Void
     
-    var body: some View {
-        #if available(iOS 26.0, *)
         HStack {
             AdminTabButton(icon: "doc.text.fill", title: "Заявки", tag: 0, selection: $selectedTab)
             AdminTabButton(icon: "sparkles.rectangle.stack.fill", title: "Статусы", tag: 1, selection: $selectedTab)
@@ -53,38 +51,11 @@ struct AdminCustomTabBar: View {
             }
         }
         .padding(8)
-        .background(.ultraThinMaterial)
-        .glassEffect()
-        .tabBarMinimizeBehavior(.onScrollDown)
-        .cornerRadius(32)
-        .padding(.horizontal, 16)
-        .padding(.bottom, 6)
-        #else
-        HStack {
-            AdminTabButton(icon: "doc.text.fill", title: "Заявки", tag: 0, selection: $selectedTab)
-            AdminTabButton(icon: "sparkles.rectangle.stack.fill", title: "Статусы", tag: 1, selection: $selectedTab)
-            AdminTabButton(icon: "person.2.fill", title: "Клиенты", tag: 2, selection: $selectedTab)
-            
-            Button(action: onLogout) {
-                VStack(spacing: 4) {
-                    Image(systemName: "rectangle.portrait.and.arrow.right")
-                        .font(.system(size: 18, weight: .medium))
-                    Text("Выход")
-                        .font(.system(size: 10, weight: .medium))
-                }
-                .foregroundColor(AdminTheme.danger)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-            }
-        }
-        .padding(8)
-        .background(Color.black.opacity(0.85))
         .background(.ultraThinMaterial)
         .cornerRadius(32)
         .overlay(RoundedRectangle(cornerRadius: 32).stroke(AdminTheme.border, lineWidth: 1))
         .padding(.horizontal, 16)
         .padding(.bottom, 6)
-        #endif
     }
 }
 
