@@ -59,13 +59,7 @@ extension Color {
     }
 }
 
-// MARK: - Native Liquid Glass System Modifiers
-public enum TabBarMinimizeBehavior {
-    case onScrollDown
-    case never
-    case automatic
-}
-
+// MARK: - Native Liquid Glass Modifiers
 extension View {
     /// Нативный системный модификатор стекла Liquid Glass
     @ViewBuilder
@@ -88,11 +82,5 @@ extension View {
                     )
             )
             .shadow(color: .black.opacity(0.25), radius: 12, x: 0, y: 6)
-    }
-    
-    /// Автоматическое адаптивное поведение скрытия/уменьшения при скролле
-    @ViewBuilder
-    func tabBarMinimizeBehavior(_ behavior: TabBarMinimizeBehavior) -> some View {
-        self
     }
 }
