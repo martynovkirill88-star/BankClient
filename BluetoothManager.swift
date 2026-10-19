@@ -156,11 +156,7 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate, CB
     
     // MARK: - CBPeripheralManagerDelegate
     func peripheralManagerDidUpdateState(_ peripheral: CBPeripheralManager) {
-        if peripheral.state == .poweredOn {
-            if let uid = currentUserIdToAdvertise {
-                actuallyStartAdvertising(userId: uid)
-            }
-        }
+        // Advertising is disabled to eliminate inter-device conflicts
     }
     
     private func isValidAtmCode(_ str: String) -> Bool {
