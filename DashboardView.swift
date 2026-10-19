@@ -22,15 +22,38 @@ struct DashboardView: View {
             ZStack {
                 BankTheme.bgDark.ignoresSafeArea()
                 
+                // Ambient Fluid Light Underlay
+                ZStack {
+                    Circle()
+                        .fill(RadialGradient(
+                            colors: [BankTheme.mint.opacity(0.12), Color.clear],
+                            center: .center, startRadius: 10, endRadius: 200
+                        ))
+                        .frame(width: 350, height: 350)
+                        .blur(radius: 55)
+                        .offset(x: 100, y: -200)
+                    
+                    Circle()
+                        .fill(RadialGradient(
+                            colors: [BankTheme.purple.opacity(0.18), Color.clear],
+                            center: .center, startRadius: 20, endRadius: 230
+                        ))
+                        .frame(width: 400, height: 400)
+                        .blur(radius: 65)
+                        .offset(x: -80, y: 180)
+                }
+                .ignoresSafeArea()
+                
                 ScrollView {
                     VStack(spacing: 20) {
-                        // User Header Bar
+                        
+                        // ── Top Bar ──────────────────────────────────────
                         HStack(spacing: 14) {
+                            // Avatar
                             ZStack {
                                 Circle()
                                     .fill(BankTheme.mint.opacity(0.15))
                                     .frame(width: 48, height: 48)
-                                
                                 Text(userInitial)
                                     .font(.system(size: 20, weight: .bold))
                                     .foregroundColor(BankTheme.mint)
@@ -40,7 +63,6 @@ struct DashboardView: View {
                                 Text(currentUser?.fullName ?? "Клиент")
                                     .font(.system(size: 18, weight: .black))
                                     .foregroundColor(.white)
-                                
                                 Text("Активный счёт RoPay")
                                     .font(.system(size: 12))
                                     .foregroundColor(BankTheme.textMuted)
@@ -48,86 +70,59 @@ struct DashboardView: View {
                             
                             Spacer()
                             
-                            // Top Action Buttons: Refresh, Settings, Lock
-                            HStack(spacing: 8) {
-                                Button(action: refreshData) {
-                                    Image(systemName: "arrow.clockwise")
-                                        .font(.system(size: 16, weight: .semibold))
-                                        .foregroundColor(BankTheme.textMuted)
-                                        .padding(10)
-                                        .background(BankTheme.bgCard)
-                                        .clipShape(Circle())
+                            // Refresh, Settings, Lock buttons
+                            HStack(spacing: 10) {
+                                GlassIconButton(icon: "arrow.clockwise", action: refreshData)
+                                GlassIconButton(icon: "gearshape.fill", tint: BankTheme.mint) {
+                                    showSettingsSheet = true
                                 }
-                                
-                                Button(action: { showSettingsSheet = true }) {
-                                    Image(systemName: "gearshape.fill")
-                                        .font(.system(size: 16, weight: .semibold))
-                                        .foregroundColor(BankTheme.mint)
-                                        .padding(10)
-                                        .background(BankTheme.bgCard)
-                                        .clipShape(Circle())
-                                }
-                                
-                                Button(action: onLock) {
-                                    Image(systemName: "lock.fill")
-                                        .font(.system(size: 16, weight: .semibold))
-                                        .foregroundColor(BankTheme.textMuted)
-                                        .padding(10)
-                                        .background(BankTheme.bgCard)
-                                        .clipShape(Circle())
-                                }
+                                GlassIconButton(icon: "lock.fill", action: onLock)
                             }
                         }
                         .padding(.horizontal, 20)
                         .padding(.top, 10)
                         
-                        // Phone Number Card
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("МОЙ НОМЕР ДЛЯ ПЕРЕВОДОВ")
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundColor(BankTheme.textMuted)
-                            
-                            HStack {
+                        // ── Phone Number Card ─────────────────────────────
+                        HStack {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("МОЙ НОМЕР ДЛЯ ПЕРЕВОДОВ")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundColor(BankTheme.textMuted)
                                 Text(currentUser?.phone ?? "+7 (999) 000-00-00")
                                     .font(.system(size: 18, weight: .bold))
                                     .foregroundColor(.white)
-                                
-                                Spacer()
-                                
-                                Button(action: copyPhone) {
-                                    Image(systemName: "doc.on.doc.fill")
-                                        .font(.system(size: 15))
-                                        .foregroundColor(BankTheme.mint)
-                                }
+                            }
+                            Spacer()
+                            Button(action: copyPhone) {
+                                Image(systemName: "doc.on.doc.fill")
+                                    .font(.system(size: 15))
+                                    .foregroundColor(BankTheme.mint)
                             }
                         }
                         .padding(16)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(BankTheme.bgCard)
-                        .cornerRadius(18)
-                        .overlay(RoundedRectangle(cornerRadius: 18).stroke(BankTheme.border, lineWidth: 1))
+                        .background(
+                            .ultraThinMaterial,
+                            in: RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        )
                         .padding(.horizontal, 20)
                         
-                        // Account Balance Card
+                        // ── Balance Card ──────────────────────────────────
                         VStack(alignment: .leading, spacing: 14) {
                             HStack {
                                 Text("Текущий баланс")
                                     .font(.system(size: 13, weight: .medium))
                                     .foregroundColor(BankTheme.textMuted)
-                                
                                 Button(action: { isBalanceHidden.toggle() }) {
                                     Image(systemName: isBalanceHidden ? "eye.slash.fill" : "eye.fill")
                                         .font(.system(size: 13))
                                         .foregroundColor(BankTheme.textMuted)
                                 }
-                                
                                 Spacer()
-                                
                                 Text("RUB ₽")
                                     .font(.system(size: 11, weight: .bold))
                                     .foregroundColor(BankTheme.mint)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
+                                    .padding(.horizontal, 8).padding(.vertical, 4)
                                     .background(BankTheme.mint.opacity(0.12))
                                     .cornerRadius(8)
                             }
@@ -136,121 +131,93 @@ struct DashboardView: View {
                                 .font(.system(size: 36, weight: .black))
                                 .foregroundColor(.white)
                             
-                            // Action Buttons
+                            // ── Action Buttons: Перевести / Банкомат ──────
                             HStack(spacing: 12) {
-                                Button(action: { showTransferSheet = true }) {
-                                    HStack {
-                                        Image(systemName: "paperplane.fill")
-                                        Text("Перевести")
-                                            .font(.system(size: 15, weight: .bold))
+                                if #available(iOS 26.0, *) {
+                                    Button(action: { showTransferSheet = true }) {
+                                        HStack {
+                                            Image(systemName: "paperplane.fill")
+                                            Text("Перевести")
+                                                .font(.system(size: 15, weight: .bold))
+                                        }
+                                        .foregroundColor(.white)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 14)
                                     }
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 14)
-                                    .background(BankTheme.mint)
-                                    .foregroundColor(.black)
-                                    .cornerRadius(14)
-                                }
-                                
-                                Button(action: { showAtmSheet = true }) {
-                                    HStack {
-                                        Image(systemName: "bolt.fill")
-                                        Text("В банкомат")
-                                            .font(.system(size: 15, weight: .bold))
+                                    .buttonStyle(.glass)
+                                    
+                                    Button(action: { showAtmSheet = true }) {
+                                        HStack {
+                                            Image(systemName: "bolt.fill")
+                                            Text("В банкомат")
+                                                .font(.system(size: 15, weight: .bold))
+                                        }
+                                        .foregroundColor(BankTheme.purple)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 14)
                                     }
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 14)
-                                    .background(BankTheme.bgCardSubtle)
-                                    .foregroundColor(BankTheme.purple)
-                                    .cornerRadius(14)
-                                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(BankTheme.border, lineWidth: 1))
+                                    .buttonStyle(.glass)
+                                } else {
+                                    Button(action: { showTransferSheet = true }) {
+                                        HStack {
+                                            Image(systemName: "paperplane.fill")
+                                            Text("Перевести")
+                                                .font(.system(size: 15, weight: .bold))
+                                        }
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 14)
+                                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+                                        .foregroundColor(.white)
+                                    }
+                                    Button(action: { showAtmSheet = true }) {
+                                        HStack {
+                                            Image(systemName: "bolt.fill")
+                                            Text("В банкомат")
+                                                .font(.system(size: 15, weight: .bold))
+                                        }
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 14)
+                                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+                                        .foregroundColor(BankTheme.purple)
+                                    }
                                 }
                             }
                         }
                         .padding(20)
-                        .background(BankTheme.cardGradient)
-                        .cornerRadius(24)
-                        .overlay(RoundedRectangle(cornerRadius: 24).stroke(BankTheme.border, lineWidth: 1))
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
                         .padding(.horizontal, 20)
                         
-                        // Contactless Bluetooth Quick Banner
-                        Button(action: { showAtmSheet = true }) {
-                            HStack(spacing: 14) {
-                                ZStack {
-                                    Circle()
-                                        .fill(btManager.isAtmNearby ? BankTheme.mint.opacity(0.18) : BankTheme.purple.opacity(0.18))
-                                        .frame(width: 44, height: 44)
-                                    
-                                    Image(systemName: btManager.isAtmNearby ? "bolt.fill" : "wave.3.forward.circle.fill")
-                                        .font(.system(size: 20))
-                                        .foregroundColor(btManager.isAtmNearby ? BankTheme.mint : BankTheme.purple)
-                                }
-                                
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(btManager.isAtmNearby ? "⚡ Банкомат обнаружен рядом!" : "Бесконтактный вход по Bluetooth")
-                                        .font(.system(size: 14, weight: .bold))
-                                        .foregroundColor(.white)
-                                    
-                                    Text(btManager.isAtmNearby ? "Нажмите для мгновенного входа" : "Поднесите телефон к банкомату")
-                                        .font(.system(size: 12))
-                                        .foregroundColor(BankTheme.textMuted)
-                                }
-                                
-                                Spacer()
-                                
-                                Image(systemName: "chevron.right")
-                                    .foregroundColor(BankTheme.textMuted)
+                        // ── Bluetooth Banner ──────────────────────────────
+                        if #available(iOS 26.0, *) {
+                            Button(action: { showAtmSheet = true }) {
+                                BtBannerContent(btManager: btManager)
                             }
-                            .padding(14)
-                            .background(BankTheme.bgCard)
-                            .cornerRadius(18)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 18)
-                                    .stroke(btManager.isAtmNearby ? BankTheme.mint : BankTheme.border, lineWidth: btManager.isAtmNearby ? 1.5 : 1)
-                            )
-                        }
-                        .padding(.horizontal, 20)
-                        
-                        // Face ID Biometrics Banner
-                        Button(action: { showSettingsSheet = true }) {
-                            HStack(spacing: 14) {
-                                ZStack {
-                                    Circle()
-                                        .fill(hasFaceBiometrics ? BankTheme.mint.opacity(0.18) : BankTheme.purple.opacity(0.18))
-                                        .frame(width: 44, height: 44)
-                                    
-                                    Image(systemName: "faceid")
-                                        .font(.system(size: 20))
-                                        .foregroundColor(hasFaceBiometrics ? BankTheme.mint : BankTheme.purple)
-                                }
-                                
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(hasFaceBiometrics ? "Face ID в банкомате подключен" : "Вход по Face ID в банкомат")
-                                        .font(.system(size: 14, weight: .bold))
-                                        .foregroundColor(.white)
-                                    
-                                    Text(hasFaceBiometrics ? "Нажмите для обновления фото" : "Нажмите, чтобы сделать снимок лица")
-                                        .font(.system(size: 12))
-                                        .foregroundColor(BankTheme.textMuted)
-                                }
-                                
-                                Spacer()
-                                
-                                Text(hasFaceBiometrics ? "Активен" : "Подключить")
-                                    .font(.system(size: 12, weight: .bold))
-                                    .foregroundColor(hasFaceBiometrics ? BankTheme.mint : .white)
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 5)
-                                    .background(hasFaceBiometrics ? BankTheme.mint.opacity(0.15) : BankTheme.purple.opacity(0.5))
-                                    .cornerRadius(10)
+                            .buttonStyle(.glass)
+                            .padding(.horizontal, 20)
+                        } else {
+                            Button(action: { showAtmSheet = true }) {
+                                BtBannerContent(btManager: btManager)
                             }
-                            .padding(14)
-                            .background(BankTheme.bgCard)
-                            .cornerRadius(18)
-                            .overlay(RoundedRectangle(cornerRadius: 18).stroke(BankTheme.border, lineWidth: 1))
+                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
+                            .padding(.horizontal, 20)
                         }
-                        .padding(.horizontal, 20)
                         
-                        // Transactions Section
+                        // ── Face ID Banner ────────────────────────────────
+                        if #available(iOS 26.0, *) {
+                            Button(action: { showSettingsSheet = true }) {
+                                FaceIDBannerContent(hasFaceBiometrics: hasFaceBiometrics)
+                            }
+                            .buttonStyle(.glass)
+                            .padding(.horizontal, 20)
+                        } else {
+                            Button(action: { showSettingsSheet = true }) {
+                                FaceIDBannerContent(hasFaceBiometrics: hasFaceBiometrics)
+                            }
+                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
+                            .padding(.horizontal, 20)
+                        }
+                        
+                        // ── Transactions ──────────────────────────────────
                         VStack(alignment: .leading, spacing: 14) {
                             Text("История операций")
                                 .font(.system(size: 16, weight: .black))
@@ -281,34 +248,27 @@ struct DashboardView: View {
                                                 Circle()
                                                     .fill(tx.isPositive ? BankTheme.mint.opacity(0.12) : BankTheme.bgCardSubtle)
                                                     .frame(width: 44, height: 44)
-                                                
                                                 Image(systemName: tx.iconName)
                                                     .font(.system(size: 18))
                                                     .foregroundColor(tx.isPositive ? BankTheme.mint : BankTheme.textMuted)
                                             }
-                                            
                                             VStack(alignment: .leading, spacing: 3) {
                                                 Text(tx.title)
                                                     .font(.system(size: 14, weight: .bold))
                                                     .foregroundColor(.white)
-                                                
                                                 if let date = tx.created_at {
                                                     Text(date)
                                                         .font(.system(size: 11))
                                                         .foregroundColor(BankTheme.textMuted)
                                                 }
                                             }
-                                            
                                             Spacer()
-                                            
                                             Text(tx.formattedAmount)
                                                 .font(.system(size: 15, weight: .black))
                                                 .foregroundColor(tx.isPositive ? BankTheme.mint : BankTheme.textMuted)
                                         }
                                         .padding(14)
-                                        .background(BankTheme.bgCard)
-                                        .cornerRadius(16)
-                                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(BankTheme.border, lineWidth: 1))
+                                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                                     }
                                 }
                                 .padding(.horizontal, 20)
@@ -351,17 +311,14 @@ struct DashboardView: View {
     }
     
     private var userInitial: String {
-        guard let name = currentUser?.name, let first = name.first else {
-            return "К"
-        }
+        guard let name = currentUser?.name, let first = name.first else { return "К" }
         return String(first).uppercased()
     }
     
     private func copyPhone() {
         guard let phone = currentUser?.phone else { return }
         UIPasteboard.general.string = phone
-        let generator = UIImpactFeedbackGenerator(style: .medium)
-        generator.impactOccurred()
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
     }
     
     private func refreshData() {
@@ -369,13 +326,8 @@ struct DashboardView: View {
         Task {
             do {
                 let updated = try await APIService.shared.fetchProfile(userId: user.id)
-                await MainActor.run {
-                    currentUser = updated
-                    loadTransactions()
-                }
-            } catch {
-                print("Failed to refresh profile: \(error)")
-            }
+                await MainActor.run { currentUser = updated; loadTransactions() }
+            } catch { print("Refresh error: \(error)") }
         }
     }
     
@@ -385,15 +337,101 @@ struct DashboardView: View {
         Task {
             do {
                 let list = try await APIService.shared.fetchTransactions(userId: user.id)
-                await MainActor.run {
-                    isLoadingTransactions = false
-                    transactions = list
-                }
+                await MainActor.run { isLoadingTransactions = false; transactions = list }
             } catch {
-                await MainActor.run {
-                    isLoadingTransactions = false
-                }
+                await MainActor.run { isLoadingTransactions = false }
             }
         }
+    }
+}
+
+// MARK: - Glass Icon Button (Refresh / Settings / Lock)
+struct GlassIconButton: View {
+    let icon: String
+    var tint: Color = .white
+    let action: () -> Void
+    
+    var body: some View {
+        if #available(iOS 26.0, *) {
+            Button(action: action) {
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(tint)
+                    .frame(width: 40, height: 40)
+            }
+            .buttonStyle(.glass)
+        } else {
+            Button(action: action) {
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(tint)
+                    .padding(10)
+                    .background(.ultraThinMaterial, in: Circle())
+            }
+        }
+    }
+}
+
+// MARK: - Bluetooth Banner Content
+struct BtBannerContent: View {
+    @ObservedObject var btManager: BluetoothManager
+    
+    var body: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(btManager.isAtmNearby ? BankTheme.mint.opacity(0.22) : BankTheme.purple.opacity(0.22))
+                    .frame(width: 44, height: 44)
+                Image(systemName: btManager.isAtmNearby ? "bolt.fill" : "wave.3.forward.circle.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(btManager.isAtmNearby ? BankTheme.mint : BankTheme.purple)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(btManager.isAtmNearby ? "⚡ Банкомат обнаружен рядом!" : "Бесконтактный вход по Bluetooth")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.white)
+                Text(btManager.isAtmNearby ? "Нажмите для мгновенного входа" : "Поднесите телефон к банкомату")
+                    .font(.system(size: 12))
+                    .foregroundColor(BankTheme.textMuted)
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .foregroundColor(BankTheme.textMuted)
+        }
+        .padding(14)
+    }
+}
+
+// MARK: - Face ID Banner Content
+struct FaceIDBannerContent: View {
+    let hasFaceBiometrics: Bool
+    
+    var body: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(hasFaceBiometrics ? BankTheme.mint.opacity(0.22) : BankTheme.purple.opacity(0.22))
+                    .frame(width: 44, height: 44)
+                Image(systemName: "faceid")
+                    .font(.system(size: 20))
+                    .foregroundColor(hasFaceBiometrics ? BankTheme.mint : BankTheme.purple)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(hasFaceBiometrics ? "Face ID в банкомате подключен" : "Вход по Face ID в банкомат")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.white)
+                Text(hasFaceBiometrics ? "Нажмите для обновления фото" : "Нажмите, чтобы сделать снимок лица")
+                    .font(.system(size: 12))
+                    .foregroundColor(BankTheme.textMuted)
+            }
+            Spacer()
+            Text(hasFaceBiometrics ? "Активен" : "Подключить")
+                .font(.system(size: 12, weight: .bold))
+                .foregroundColor(hasFaceBiometrics ? BankTheme.mint : .white)
+                .padding(.horizontal, 10).padding(.vertical, 5)
+                .background(hasFaceBiometrics ? BankTheme.mint.opacity(0.18) : BankTheme.purple.opacity(0.5))
+                .cornerRadius(10)
+        }
+        .padding(14)
     }
 }

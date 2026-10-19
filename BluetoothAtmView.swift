@@ -33,6 +33,27 @@ struct BluetoothAtmView: View {
             ZStack {
                 BankTheme.bgDark.ignoresSafeArea()
                 
+                // Ambient fluid underlay
+                ZStack {
+                    Circle()
+                        .fill(RadialGradient(
+                            colors: [BankTheme.purple.opacity(0.15), Color.clear],
+                            center: .center, startRadius: 10, endRadius: 200
+                        ))
+                        .frame(width: 360, height: 360)
+                        .blur(radius: 60)
+                        .offset(x: 80, y: -160)
+                    Circle()
+                        .fill(RadialGradient(
+                            colors: [BankTheme.mint.opacity(0.10), Color.clear],
+                            center: .center, startRadius: 10, endRadius: 180
+                        ))
+                        .frame(width: 300, height: 300)
+                        .blur(radius: 55)
+                        .offset(x: -100, y: 220)
+                }
+                .ignoresSafeArea()
+                
                 ScrollView {
                     VStack(spacing: 24) {
                         // Header description
@@ -87,10 +108,9 @@ struct BluetoothAtmView: View {
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 8)
-                        .background(BankTheme.bgCard)
-                        .cornerRadius(20)
+                        .background(.ultraThinMaterial, in: Capsule())
                         
-                        // Detected Code Card (Automatically discovered via BLE or Local Server)
+                        // Detected Code Card
                         if !activeCode.isEmpty {
                             VStack(spacing: 6) {
                                 Text("КОД БАНКОМАТА ОБНАРУЖЕН")
@@ -111,42 +131,80 @@ struct BluetoothAtmView: View {
                         }
                         
                         // Action Button: Instant Contactless Confirmation
-                        Button(action: confirmAtmLogin) {
-                            if isLoading {
-                                ProgressView().tint(.white)
-                            } else {
-                                HStack(spacing: 10) {
-                                    if canConfirm {
-                                        Image(systemName: "bolt.fill")
-                                        Text("Войти в банкомат (Нажмите)")
-                                    } else if !activeCode.isEmpty && !btManager.isVeryClose {
-                                        Image(systemName: "hand.tap.fill")
-                                        Text("Поднесите вплотную к экрану")
-                                    } else {
-                                        Image(systemName: "wave.3.forward.circle")
-                                        Text("Поиск банкомата рядом...")
+                        if #available(iOS 26.0, *) {
+                            Button(action: confirmAtmLogin) {
+                                if isLoading {
+                                    ProgressView().tint(.white)
+                                } else {
+                                    HStack(spacing: 10) {
+                                        if canConfirm {
+                                            Image(systemName: "bolt.fill")
+                                            Text("Войти в банкомат (Нажмите)")
+                                        } else if !activeCode.isEmpty && !btManager.isVeryClose {
+                                            Image(systemName: "hand.tap.fill")
+                                            Text("Поднесите вплотную к экрану")
+                                        } else {
+                                            Image(systemName: "wave.3.forward.circle")
+                                            Text("Поиск банкомата рядом...")
+                                        }
                                     }
+                                    .font(.system(size: 16, weight: .bold))
+                                    .foregroundColor(canConfirm ? .white : BankTheme.textMuted)
                                 }
-                                .font(.system(size: 16, weight: .bold))
-                                .foregroundColor(canConfirm ? .white : BankTheme.textMuted)
                             }
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .buttonStyle(.glass)
+                            .padding(.horizontal, 20)
+                            .disabled(!canConfirm || isLoading)
+                        } else {
+                            Button(action: confirmAtmLogin) {
+                                if isLoading {
+                                    ProgressView().tint(.white)
+                                } else {
+                                    HStack(spacing: 10) {
+                                        if canConfirm {
+                                            Image(systemName: "bolt.fill")
+                                            Text("Войти в банкомат (Нажмите)")
+                                        } else if !activeCode.isEmpty && !btManager.isVeryClose {
+                                            Image(systemName: "hand.tap.fill")
+                                            Text("Поднесите вплотную к экрану")
+                                        } else {
+                                            Image(systemName: "wave.3.forward.circle")
+                                            Text("Поиск банкомата рядом...")
+                                        }
+                                    }
+                                    .font(.system(size: 16, weight: .bold))
+                                    .foregroundColor(canConfirm ? .white : BankTheme.textMuted)
+                                }
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(
+                                canConfirm ? AnyShapeStyle(BankTheme.purpleGradient) : AnyShapeStyle(Color.gray.opacity(0.2))
+                            )
+                            .cornerRadius(16)
+                            .padding(.horizontal, 20)
+                            .disabled(!canConfirm || isLoading)
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(
-                            canConfirm ? AnyShapeStyle(BankTheme.purpleGradient) : AnyShapeStyle(Color.gray.opacity(0.2))
-                        )
-                        .cornerRadius(16)
-                        .padding(.horizontal, 20)
-                        .disabled(!canConfirm || isLoading)
                         
-                        // Optional manual input toggle (if user ever wants to type manually)
-                        Button(action: { withAnimation { showManualInput.toggle() } }) {
-                            Text(showManualInput ? "Скрыть ручной ввод" : "Ввести 6 цифр вручную")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(BankTheme.textMuted)
+                        // Manual input toggle
+                        if #available(iOS 26.0, *) {
+                            Button(action: { withAnimation { showManualInput.toggle() } }) {
+                                Text(showManualInput ? "Скрыть ручной ввод" : "Ввести 6 цифр вручную")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(BankTheme.textMuted)
+                            }
+                            .buttonStyle(.glass)
+                            .padding(.top, 4)
+                        } else {
+                            Button(action: { withAnimation { showManualInput.toggle() } }) {
+                                Text(showManualInput ? "Скрыть ручной ввод" : "Ввести 6 цифр вручную")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(BankTheme.textMuted)
+                            }
+                            .padding(.top, 4)
                         }
-                        .padding(.top, 4)
                         
                         if showManualInput {
                             VStack(alignment: .leading, spacing: 8) {
@@ -156,9 +214,7 @@ struct BluetoothAtmView: View {
                                     .multilineTextAlignment(.center)
                                     .keyboardType(.numberPad)
                                     .padding()
-                                    .background(BankTheme.bgCard)
-                                    .cornerRadius(16)
-                                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(BankTheme.border, lineWidth: 1))
+                                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                             }
                             .padding(.horizontal, 20)
                             .transition(.opacity)

@@ -20,40 +20,86 @@ struct TransferView: View {
             ZStack {
                 BankTheme.bgDark.ignoresSafeArea()
                 
+                // Ambient fluid underlay
+                ZStack {
+                    Circle()
+                        .fill(RadialGradient(
+                            colors: [BankTheme.mint.opacity(0.10), Color.clear],
+                            center: .center, startRadius: 10, endRadius: 180
+                        ))
+                        .frame(width: 300, height: 300)
+                        .blur(radius: 50)
+                        .offset(x: 120, y: -150)
+                    Circle()
+                        .fill(RadialGradient(
+                            colors: [BankTheme.purple.opacity(0.14), Color.clear],
+                            center: .center, startRadius: 10, endRadius: 200
+                        ))
+                        .frame(width: 350, height: 350)
+                        .blur(radius: 60)
+                        .offset(x: -90, y: 200)
+                }
+                .ignoresSafeArea()
+                
                 ScrollView {
                     VStack(spacing: 22) {
                         // Contact Picker Shortcut Button
-                        Button(action: { showContactsPicker = true }) {
-                            HStack(spacing: 12) {
-                                ZStack {
-                                    Circle()
-                                        .fill(BankTheme.purpleGradient)
-                                        .frame(width: 40, height: 40)
-                                    Image(systemName: "person.crop.circle.badge.plus")
-                                        .font(.system(size: 19))
-                                        .foregroundColor(.white)
-                                }
-                                
-                                VStack(alignment: .leading, spacing: 3) {
-                                    Text("Перевод контактам")
-                                        .font(.system(size: 15, weight: .bold))
-                                        .foregroundColor(.white)
-                                    Text("Выбрать из телефонной книги (проверка в RoPay)")
-                                        .font(.system(size: 12))
+                        if #available(iOS 26.0, *) {
+                            Button(action: { showContactsPicker = true }) {
+                                HStack(spacing: 12) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(BankTheme.purpleGradient)
+                                            .frame(width: 40, height: 40)
+                                        Image(systemName: "person.crop.circle.badge.plus")
+                                            .font(.system(size: 19))
+                                            .foregroundColor(.white)
+                                    }
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text("Перевод контактам")
+                                            .font(.system(size: 15, weight: .bold))
+                                            .foregroundColor(.white)
+                                        Text("Выбрать из телефонной книги (проверка в RoPay)")
+                                            .font(.system(size: 12))
+                                            .foregroundColor(BankTheme.textMuted)
+                                    }
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 13, weight: .bold))
                                         .foregroundColor(BankTheme.textMuted)
                                 }
-                                
-                                Spacer()
-                                
-                                Image(systemName: "chevron.right")
-                                    .font(.system(size: 13, weight: .bold))
-                                    .foregroundColor(BankTheme.textMuted)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 12)
                             }
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 12)
-                            .background(BankTheme.bgCard)
-                            .cornerRadius(16)
-                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(BankTheme.mint.opacity(0.3), lineWidth: 1))
+                            .buttonStyle(.glass)
+                        } else {
+                            Button(action: { showContactsPicker = true }) {
+                                HStack(spacing: 12) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(BankTheme.purpleGradient)
+                                            .frame(width: 40, height: 40)
+                                        Image(systemName: "person.crop.circle.badge.plus")
+                                            .font(.system(size: 19))
+                                            .foregroundColor(.white)
+                                    }
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text("Перевод контактам")
+                                            .font(.system(size: 15, weight: .bold))
+                                            .foregroundColor(.white)
+                                        Text("Выбрать из телефонной книги (проверка в RoPay)")
+                                            .font(.system(size: 12))
+                                            .foregroundColor(BankTheme.textMuted)
+                                    }
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 13, weight: .bold))
+                                        .foregroundColor(BankTheme.textMuted)
+                                }
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 12)
+                                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            }
                         }
                         
                         // Recipient Phone Input Field
@@ -78,9 +124,7 @@ struct TransferView: View {
                                 }
                             }
                             .padding()
-                            .background(BankTheme.bgCard)
-                            .cornerRadius(16)
-                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(BankTheme.border, lineWidth: 1))
+                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                             
                             // Recipient Verified Pill
                             if isLookingUp {
@@ -129,21 +173,36 @@ struct TransferView: View {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 10) {
                                 ForEach(quickAmounts, id: \.self) { amt in
-                                    Button(action: {
-                                        let gen = UIImpactFeedbackGenerator(style: .light)
-                                        gen.impactOccurred()
-                                        withAnimation(.spring(response: 0.35, dampingFraction: 0.72)) {
-                                            amountString = "\(amt)"
+                                    if #available(iOS 26.0, *) {
+                                        Button(action: {
+                                            let gen = UIImpactFeedbackGenerator(style: .light)
+                                            gen.impactOccurred()
+                                            withAnimation(.spring(response: 0.35, dampingFraction: 0.72)) {
+                                                amountString = "\(amt)"
+                                            }
+                                        }) {
+                                            Text("+\(amt) ₽")
+                                                .font(.system(size: 14, weight: .bold))
+                                                .foregroundColor(.white)
+                                                .padding(.horizontal, 16)
+                                                .padding(.vertical, 10)
                                         }
-                                    }) {
-                                        Text("+\(amt) ₽")
-                                            .font(.system(size: 14, weight: .bold))
-                                            .foregroundColor(.white)
-                                            .padding(.horizontal, 16)
-                                            .padding(.vertical, 10)
-                                            .background(BankTheme.bgCardSubtle)
-                                            .cornerRadius(12)
-                                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(BankTheme.border, lineWidth: 1))
+                                        .buttonStyle(.glass)
+                                    } else {
+                                        Button(action: {
+                                            let gen = UIImpactFeedbackGenerator(style: .light)
+                                            gen.impactOccurred()
+                                            withAnimation(.spring(response: 0.35, dampingFraction: 0.72)) {
+                                                amountString = "\(amt)"
+                                            }
+                                        }) {
+                                            Text("+\(amt) ₽")
+                                                .font(.system(size: 14, weight: .bold))
+                                                .foregroundColor(.white)
+                                                .padding(.horizontal, 16)
+                                                .padding(.vertical, 10)
+                                                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                                        }
                                     }
                                 }
                             }
@@ -157,20 +216,37 @@ struct TransferView: View {
                         
                         Spacer(minLength: 20)
                         
-                        Button(action: submitTransfer) {
-                            if isLoading {
-                                ProgressView().tint(.black)
-                            } else {
-                                Text("Подтвердить перевод")
-                                    .font(.system(size: 16, weight: .bold))
-                                    .foregroundColor(.black)
+                        // Confirm Transfer Button
+                        if #available(iOS 26.0, *) {
+                            Button(action: submitTransfer) {
+                                if isLoading {
+                                    ProgressView().tint(.white)
+                                } else {
+                                    Text("Подтвердить перевод")
+                                        .font(.system(size: 16, weight: .bold))
+                                        .foregroundColor(.white)
+                                }
                             }
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .buttonStyle(.glass)
+                            .disabled(isLoading)
+                        } else {
+                            Button(action: submitTransfer) {
+                                if isLoading {
+                                    ProgressView().tint(.black)
+                                } else {
+                                    Text("Подтвердить перевод")
+                                        .font(.system(size: 16, weight: .bold))
+                                        .foregroundColor(.black)
+                                }
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(BankTheme.mint)
+                            .cornerRadius(16)
+                            .disabled(isLoading)
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(BankTheme.mint)
-                        .cornerRadius(16)
-                        .disabled(isLoading)
                     }
                     .padding(20)
                 }
