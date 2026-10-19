@@ -152,33 +152,15 @@ struct PinLockView: View {
                                                 .foregroundColor(BankTheme.textMuted)
                                         } else {
                                             Text(key)
-                                                .font(.system(size: 28, weight: .semibold))
+                                                .font(.system(size: 28, weight: .semibold, design: .rounded))
                                                 .foregroundColor(key == "C" ? BankTheme.textMuted : .white)
                                         }
                                     }
                                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                    .background(
-                                        ZStack {
-                                            // Жидкая полупрозрачная подложка с динамическим размытием
-                                            Color.white.opacity(0.08)
-                                            
-                                            // Тонкий световой контур (эффект преломления граней стекла)
-                                            RoundedRectangle(cornerRadius: 32)
-                                                .stroke(
-                                                    LinearGradient(
-                                                        colors: [.white.opacity(0.6), .white.opacity(0.1), .clear, .white.opacity(0.2)],
-                                                        startPoint: .topLeading,
-                                                        endPoint: .bottomTrailing
-                                                    ),
-                                                    lineWidth: 1.2
-                                                )
-                                        }
-                                    )
-                                    .background(.ultraThinMaterial)
-                                    .clipShape(RoundedRectangle(cornerRadius: 32))
-                                    .shadow(color: .black.opacity(0.3), radius: 12, x: 0, y: 6)
+                                    .glassEffect(cornerRadius: 32)
                                 }
                                 .frame(width: 76, height: 76)
+                                .buttonStyle(GlassScaleButtonStyle())
                                 .disabled(isLoading)
                             }
                         }
@@ -198,26 +180,10 @@ struct PinLockView: View {
                             .foregroundColor(.white)
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 15)
-                    .background(
-                        ZStack {
-                            Capsule()
-                                .fill(.ultraThinMaterial)
-                            Capsule()
-                                .fill(BankTheme.mint.opacity(0.12))
-                            Capsule()
-                                .stroke(
-                                    LinearGradient(
-                                        colors: [Color.white.opacity(0.65), Color.white.opacity(0.12)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    ),
-                                    lineWidth: 1.2
-                                )
-                        }
-                    )
-                    .shadow(color: BankTheme.mint.opacity(0.15), radius: 10, y: 4)
+                    .padding(.vertical, 16)
+                    .glassEffect(cornerRadius: 18)
                 }
+                .buttonStyle(GlassScaleButtonStyle())
                 .padding(.horizontal, 32)
                 
                 // Footer Links
@@ -548,5 +514,44 @@ struct RegisterSheetView: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Native Liquid Glass System Modifiers
+extension View {
+    /// Нативный модификатор Liquid Glass на базе системных материалов SwiftUI (.ultraThinMaterial)
+    /// с динамическим преломлением фона, мягкой линзовой границей и световым контуром.
+    func glassEffect(cornerRadius: CGFloat = 32) -> some View {
+        self
+            .background(
+                .ultraThinMaterial,
+                in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .strokeBorder(
+                        LinearGradient(
+                            stops: [
+                                .init(color: .white.opacity(0.65), location: 0.0),
+                                .init(color: .white.opacity(0.18), location: 0.35),
+                                .init(color: .clear, location: 0.70),
+                                .init(color: .white.opacity(0.25), location: 1.0)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1.2
+                    )
+            )
+            .shadow(color: .black.opacity(0.25), radius: 10, x: 0, y: 5)
+    }
+}
+
+struct GlassScaleButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.92 : 1.0)
+            .opacity(configuration.isPressed ? 0.85 : 1.0)
+            .animation(.spring(response: 0.22, dampingFraction: 0.68), value: configuration.isPressed)
     }
 }
