@@ -132,75 +132,57 @@ struct PinLockView: View {
                 
                 Spacer()
                 
-                // Liquid Glass Numeric Keypad Pod
-                ZStack {
-                    // Liquid Glass Underlay Dock
-                    RoundedRectangle(cornerRadius: 36, style: .continuous)
-                        .fill(.ultraThinMaterial)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 36, style: .continuous)
-                                .fill(
-                                    LinearGradient(
-                                        stops: [
-                                            .init(color: Color.white.opacity(0.12), location: 0.0),
-                                            .init(color: Color.white.opacity(0.02), location: 0.4),
-                                            .init(color: Color.clear, location: 0.8)
-                                        ],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 36, style: .continuous)
-                                .stroke(
-                                    LinearGradient(
-                                        stops: [
-                                            .init(color: Color.white.opacity(0.55), location: 0.0),
-                                            .init(color: Color.white.opacity(0.18), location: 0.25),
-                                            .init(color: Color.white.opacity(0.05), location: 0.65),
-                                            .init(color: Color.white.opacity(0.25), location: 1.0)
-                                        ],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    ),
-                                    lineWidth: 1.2
-                                )
-                        )
-                        .shadow(color: Color.black.opacity(0.35), radius: 24, y: 12)
+                // Numeric Keypad with Liquid Glass Buttons
+                VStack(spacing: 16) {
+                    let rows = [
+                        ["1", "2", "3"],
+                        ["4", "5", "6"],
+                        ["7", "8", "9"],
+                        ["C", "0", "DEL"]
+                    ]
                     
-                    VStack(spacing: 14) {
-                        let rows = [
-                            ["1", "2", "3"],
-                            ["4", "5", "6"],
-                            ["7", "8", "9"],
-                            ["C", "0", "DEL"]
-                        ]
-                        
-                        ForEach(rows, id: \.self) { row in
-                            HStack(spacing: 18) {
-                                ForEach(row, id: \.self) { key in
-                                    Button(action: { handleKeypad(key) }) {
-                                        Group {
-                                            if key == "DEL" {
-                                                Image(systemName: "delete.left.fill")
-                                                    .font(.system(size: 22, weight: .semibold))
-                                                    .foregroundColor(BankTheme.textMuted)
-                                            } else {
-                                                Text(key)
-                                                    .font(.system(size: 28, weight: .bold, design: .rounded))
-                                                    .foregroundColor(key == "C" ? BankTheme.textMuted : .white)
-                                            }
+                    ForEach(rows, id: \.self) { row in
+                        HStack(spacing: 18) {
+                            ForEach(row, id: \.self) { key in
+                                Button(action: { handleKeypad(key) }) {
+                                    Group {
+                                        if key == "DEL" {
+                                            Image(systemName: "delete.left.fill")
+                                                .font(.system(size: 22, weight: .semibold))
+                                                .foregroundColor(BankTheme.textMuted)
+                                        } else {
+                                            Text(key)
+                                                .font(.system(size: 28, weight: .semibold))
+                                                .foregroundColor(key == "C" ? BankTheme.textMuted : .white)
                                         }
                                     }
-                                    .buttonStyle(GlassPinButtonStyle(key: key))
-                                    .disabled(isLoading)
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                    .background(
+                                        ZStack {
+                                            // Жидкая полупрозрачная подложка с динамическим размытием
+                                            Color.white.opacity(0.08)
+                                            
+                                            // Тонкий световой контур (эффект преломления граней стекла)
+                                            RoundedRectangle(cornerRadius: 32)
+                                                .stroke(
+                                                    LinearGradient(
+                                                        colors: [.white.opacity(0.6), .white.opacity(0.1), .clear, .white.opacity(0.2)],
+                                                        startPoint: .topLeading,
+                                                        endPoint: .bottomTrailing
+                                                    ),
+                                                    lineWidth: 1.2
+                                                )
+                                        }
+                                    )
+                                    .background(.ultraThinMaterial)
+                                    .clipShape(RoundedRectangle(cornerRadius: 32))
+                                    .shadow(color: .black.opacity(0.3), radius: 12, x: 0, y: 6)
                                 }
+                                .frame(width: 76, height: 76)
+                                .disabled(isLoading)
                             }
                         }
                     }
-                    .padding(.vertical, 18)
-                    .padding(.horizontal, 16)
                 }
                 .padding(.horizontal, 24)
                 
@@ -566,96 +548,5 @@ struct RegisterSheetView: View {
                 }
             }
         }
-    }
-}
-
-// MARK: - Liquid Glass PIN Keypad Button Style
-struct GlassPinButtonStyle: ButtonStyle {
-    let key: String
-    
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .frame(width: 68, height: 68)
-            .background(
-                ZStack {
-                    if key == "C" || key == "DEL" {
-                        // Soft functional frosted glass
-                        Circle()
-                            .fill(.ultraThinMaterial)
-                            .opacity(configuration.isPressed ? 0.70 : 0.35)
-                        
-                        Circle()
-                            .stroke(
-                                LinearGradient(
-                                    colors: [
-                                        Color.white.opacity(configuration.isPressed ? 0.35 : 0.18),
-                                        Color.white.opacity(0.04)
-                                    ],
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                ),
-                                lineWidth: 1.0
-                            )
-                    } else {
-                        // 1. Native iOS Material (refracts background)
-                        Circle()
-                            .fill(.ultraThinMaterial)
-                        
-                        // 2. Liquid Glass Body (milky gradient refraction)
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    stops: [
-                                        .init(color: Color.white.opacity(configuration.isPressed ? 0.28 : 0.16), location: 0.0),
-                                        .init(color: Color.white.opacity(configuration.isPressed ? 0.08 : 0.03), location: 0.4),
-                                        .init(color: Color.clear, location: 0.8)
-                                    ],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                        
-                        // 3. Ambient Mint Glow on Press
-                        Circle()
-                            .fill(BankTheme.mint.opacity(configuration.isPressed ? 0.30 : 0.06))
-                        
-                        // 4. Specular Lens Highlight (Верхний блик преломления)
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    stops: [
-                                        .init(color: Color.white.opacity(configuration.isPressed ? 0.35 : 0.55), location: 0.0),
-                                        .init(color: Color.white.opacity(0.12), location: 0.28),
-                                        .init(color: Color.clear, location: 0.65)
-                                    ],
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                )
-                            )
-                            .padding(1.2)
-                        
-                        // 5. Specular Rim Stroke (Светящаяся скошенная кромка стекла)
-                        Circle()
-                            .stroke(
-                                LinearGradient(
-                                    stops: [
-                                        .init(color: Color.white.opacity(configuration.isPressed ? 0.45 : 0.85), location: 0.0),
-                                        .init(color: Color.white.opacity(0.25), location: 0.3),
-                                        .init(color: Color.white.opacity(0.08), location: 0.65),
-                                        .init(color: Color.white.opacity(0.35), location: 1.0)
-                                    ],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ),
-                                lineWidth: 1.2
-                            )
-                    }
-                }
-            )
-            .clipShape(Circle())
-            .shadow(color: key == "C" || key == "DEL" ? Color.clear : BankTheme.mint.opacity(configuration.isPressed ? 0.18 : 0.04), radius: 8, y: 3)
-            .shadow(color: Color.black.opacity(key == "C" || key == "DEL" ? 0.15 : 0.35), radius: 6, y: 3)
-            .scaleEffect(configuration.isPressed ? 0.90 : 1.0)
-            .animation(.spring(response: 0.22, dampingFraction: 0.65), value: configuration.isPressed)
     }
 }
