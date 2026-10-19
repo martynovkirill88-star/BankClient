@@ -352,7 +352,7 @@ struct ServerSettingsSheet: View {
                         
                         HStack {
                             Circle().fill(BankTheme.mint).frame(width: 8, height: 8)
-                            Text("https://app.uchisplus.online")
+                            Text("https://app.ropay.site")
                                 .font(.system(size: 16, weight: .bold, design: .monospaced))
                                 .foregroundColor(.white)
                         }

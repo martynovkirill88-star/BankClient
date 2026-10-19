@@ -5,8 +5,8 @@ import Combine
 class APIService: ObservableObject {
     static let shared = APIService()
     
-    // Hardcoded production server URL - fixed to app.uchisplus.online
-    static let productionBaseURL = "https://app.uchisplus.online"
+    // Hardcoded production server URL - fixed to app.ropay.site
+    static let productionBaseURL = "https://app.ropay.site"
     
     var baseURL: String {
         Self.productionBaseURL

@@ -321,7 +321,7 @@ struct SettingsView: View {
                                     Circle()
                                         .fill(BankTheme.mint)
                                         .frame(width: 8, height: 8)
-                                    Text("app.uchisplus.online")
+                                    Text("app.ropay.site")
                                         .font(.system(size: 15, weight: .bold, design: .monospaced))
                                         .foregroundColor(.white)
                                 }
