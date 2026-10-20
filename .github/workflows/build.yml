@@ -68,9 +68,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/heads/main')
         with:
-          tag_name: v1.0.18
-          name: "RoPay iOS v1.0.18 - Two-Step Transfer & Anti-Spam Security with White Lottie Loader"
-          body: "RoPay v1.0.18: Двухэтапная система переводов (ввод -> кнопка 'Продолжить' -> сверка данных -> кнопка 'Подтвердить'), серверная антиспам-проверка транзакций и белый анимированный лоадер Lottie."
+          tag_name: v1.0.19
+          name: "RoPay iOS v1.0.19 - Clean Status View, No Glow Loader & Streamlined Settings"
+          body: "RoPay v1.0.19: Убрано свечение с анимации загрузки, статусы прижаты к нижнему краю без блюр-плашки, из настроек полностью удалены блок сервера и неработающие кнопки."
           files: build/ClientBank.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

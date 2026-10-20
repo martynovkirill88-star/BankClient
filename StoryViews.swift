@@ -245,22 +245,18 @@ struct StoryViewer: View {
                     
                     Spacer()
                     
-                    // Bottom Caption Card if status has text
+                    // Bottom Caption (без плашки блюра, прижат к нижнему краю экрана)
                     if let text = status.text, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(text)
-                                .font(.system(size: 15, weight: .medium))
-                                .foregroundColor(.white)
-                                .lineSpacing(3)
-                        }
-                        .padding(16)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(
-                            .ultraThinMaterial,
-                            in: RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        )
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 24)
+                        Text(text)
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(.white)
+                            .shadow(color: Color.black.opacity(0.9), radius: 3, x: 0, y: 1)
+                            .shadow(color: Color.black.opacity(0.6), radius: 8, x: 0, y: 2)
+                            .lineSpacing(2)
+                            .multilineTextAlignment(.leading)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 18)
+                            .padding(.bottom, 12)
                     }
                 }
             }

@@ -520,17 +520,8 @@ struct TransferView: View {
         VStack(spacing: 28) {
             Spacer()
             
-            // White Lottie Loader from CyPnRwRkl4.json
-            ZStack {
-                Circle()
-                    .fill(RadialGradient(
-                        colors: [Color.white.opacity(0.15), Color.clear],
-                        center: .center, startRadius: 10, endRadius: 80
-                    ))
-                    .frame(width: 170, height: 170)
-                
-                LottieWhiteLoaderView()
-            }
+            // White Lottie Loader from CyPnRwRkl4.json (без свечения)
+            LottieWhiteLoaderView()
             
             VStack(spacing: 10) {
                 Text("Проверка перевода...")
