@@ -68,9 +68,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/heads/main')
         with:
-          tag_name: v1.0.25
-          name: "RoPay iOS v1.0.25 - POS Terminal Bluetooth Button Match & Decoding Fix"
-          body: "RoPay v1.0.25: Идентичный дизайн кнопки терминала как у баннера Bluetooth; фикс декодирования сессии терминала для приёма оплаты касанием."
+          tag_name: v1.0.26
+          name: "RoPay iOS v1.0.26 - Physical Touch Calibration & Authentic Apple Pay Chime"
+          body: "RoPay v1.0.26: Строгая калибровка дистанции касания (RSSI >= -33 dBm с защитой от срабатываний на расстоянии); замена звуков на оригинальный звонкий колокольчик Apple Pay (1407) и тактильный виброотклик Haptic без лишних звуков."
           files: build/ClientBank.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

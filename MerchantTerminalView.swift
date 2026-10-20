@@ -70,8 +70,8 @@ struct MerchantTerminalView: View {
                             self.isPaidSuccess = true
                             self.tapManager.stopMerchantTerminal()
                             
-                            AudioServicesPlaySystemSound(1520)
-                            AudioServicesPlaySystemSound(1025)
+                            // Authentic Apple Pay success chime (1407 = payment_success.caf) and haptic
+                            AudioServicesPlaySystemSound(1407)
                             UINotificationFeedbackGenerator().notificationOccurred(.success)
                             onPaymentReceived?(updated.amount)
                         }

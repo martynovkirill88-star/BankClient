@@ -24,6 +24,7 @@ class TapPaymentManager: NSObject, ObservableObject {
     // Bluetooth Managers
     private var peripheralManager: CBPeripheralManager?
     private var centralManager: CBCentralManager?
+    private var contactHitCount: Int = 0
     
     // CoreNFC Session (Official Apple System Sheet)
     private var nfcSession: NFCNDEFReaderSession?
@@ -64,6 +65,7 @@ class TapPaymentManager: NSObject, ObservableObject {
         self.onContactFound = onFound
         self.isBuyerScanning = true
         self.isProximityContactDetected = false
+        self.contactHitCount = 0
         self.statusMessage = "Приложите iPhone к терминалу продавца"
         
         // 1. Launch BLE Central to detect touch distance
@@ -84,10 +86,11 @@ class TapPaymentManager: NSObject, ObservableObject {
         guard isBuyerScanning else { return }
         isBuyerScanning = false
         isProximityContactDetected = true
+        contactHitCount = 0
         
-        // Heavy haptic impact + system chime (NameDrop contact feel)
-        AudioServicesPlaySystemSound(1520) // Strong haptic pulse
-        AudioServicesPlaySystemSound(1108) // Cash register / Payment ding
+        // Clean Apple haptic touch feedback
+        UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
+        AudioServicesPlaySystemSound(1519)
         
         // Update Native Apple NFC Sheet with success checkmark
         if let nfc = nfcSession {
@@ -113,6 +116,7 @@ class TapPaymentManager: NSObject, ObservableObject {
         nfcSession = nil
         isBuyerScanning = false
         showFallbackSheet = false
+        contactHitCount = 0
     }
 }
 
@@ -148,8 +152,16 @@ extension TapPaymentManager: CBCentralManagerDelegate {
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
         let rssiVal = RSSI.intValue
         
-        // Contact Threshold: phones must be in touching contact (< 3-5 cm, RSSI >= -48 dBm)
-        guard rssiVal >= -48 else { return }
+        // Strict Physical Touch Threshold:
+        // When iPhones touch back-to-back, RSSI is typically -20 to -33 dBm.
+        // At even 15-20 cm away, RSSI drops below -42 dBm.
+        guard rssiVal >= -33 else {
+            contactHitCount = 0
+            return
+        }
+        
+        contactHitCount += 1
+        guard contactHitCount >= 2 else { return }
         
         let localName = (advertisementData[CBAdvertisementDataLocalNameKey] as? String) ?? (peripheral.name ?? "")
         if localName.hasPrefix("RP-") {

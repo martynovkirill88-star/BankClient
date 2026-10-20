@@ -328,8 +328,8 @@ struct BuyerTapPayView: View {
                     self.isPaying = false
                     self.isPaidSuccess = true
                     
-                    AudioServicesPlaySystemSound(1520)
-                    AudioServicesPlaySystemSound(1025)
+                    // Authentic Apple Pay success chime (1407 = payment_success.caf) and haptic
+                    AudioServicesPlaySystemSound(1407)
                     UINotificationFeedbackGenerator().notificationOccurred(.success)
                     onPaymentCompleted?(newBal)
                 }
