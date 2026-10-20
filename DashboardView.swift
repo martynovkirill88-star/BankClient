@@ -13,6 +13,10 @@ struct DashboardView: View {
     @State private var isBalanceHidden: Bool = false
     @State private var showBleUpcomingAlert: Bool = false
     
+    // Dynamic Services / Tele2 Mini-Apps
+    @State private var dynamicServices: [BankService] = []
+    @State private var selectedServiceForBrowser: BankService? = nil
+    
     // Statuses / Stories State
     @State private var statuses: [BankStatus] = []
     @State private var selectedStatusForViewer: BankStatus? = nil
@@ -51,6 +55,19 @@ struct DashboardView: View {
         }
     }
     
+    func loadDynamicServices() {
+        Task {
+            do {
+                let fetched = try await APIService.shared.fetchServices()
+                await MainActor.run {
+                    self.dynamicServices = fetched
+                }
+            } catch {
+                print("Error loading dynamic services: \(error)")
+            }
+        }
+    }
+    
     var hasFaceBiometrics: Bool {
         guard let user = currentUser else { return false }
         return (user.has_face == true) || (user.photo_filename != nil && !user.photo_filename!.isEmpty)
@@ -71,6 +88,9 @@ struct DashboardView: View {
                 if let user = currentUser {
                     BluetoothAtmView(currentUser: user)
                 }
+            }
+            .sheet(item: $selectedServiceForBrowser) { srv in
+                RoPayInAppBrowserView(service: srv, userId: currentUser?.id)
             }
             .fullScreenCover(item: $selectedStatusForViewer) { initialStatus in
                 StoryViewer(
@@ -162,6 +182,9 @@ struct DashboardView: View {
                 BluetoothAtmView(currentUser: user)
             }
         }
+        .sheet(item: $selectedServiceForBrowser) { srv in
+            RoPayInAppBrowserView(service: srv, userId: currentUser?.id)
+        }
         .fullScreenCover(item: $selectedStatusForViewer) { initialStatus in
             StoryViewer(
                 initialStatus: initialStatus,
@@ -187,6 +210,7 @@ struct DashboardView: View {
         btManager.startScanning()
         loadTransactions()
         loadStatuses()
+        loadDynamicServices()
     }
     
     // MARK: - Ambient Light Background
@@ -368,51 +392,33 @@ struct DashboardView: View {
                             .padding(.horizontal, 20)
                         }
                         
-                        // ── Recent Transactions Preview ───────────────────
-                        VStack(alignment: .leading, spacing: 14) {
-                            HStack {
-                                Text("История операций")
-                                    .font(.system(size: 16, weight: .black))
-                                    .foregroundColor(.white)
-                                Spacer()
-                                Button(action: {
-                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                                        selectedTab = 1
-                                    }
-                                }) {
-                                    Text("Все")
-                                        .font(.system(size: 13, weight: .bold))
-                                        .foregroundColor(BankTheme.mint)
-                                }
-                            }
-                            .padding(.horizontal, 20)
-                            
-                            if isLoadingTransactions {
-                                ProgressView()
-                                    .tint(BankTheme.mint)
-                                    .frame(maxWidth: .infinity, alignment: .center)
-                                    .padding(.vertical, 20)
-                            } else if transactions.isEmpty {
-                                VStack(spacing: 8) {
-                                    Image(systemName: "tray.fill")
-                                        .font(.system(size: 32))
-                                        .foregroundColor(BankTheme.textMuted)
-                                    Text("История операций пока пуста")
-                                        .font(.system(size: 14))
-                                        .foregroundColor(BankTheme.textMuted)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 20)
-                            } else {
-                                VStack(spacing: 10) {
-                                    ForEach(transactions.prefix(3)) { tx in
-                                        transactionRow(tx)
+                        // ── Dynamic Services (Tele2 Style Buttons) ────────
+                        if !dynamicServices.isEmpty {
+                            VStack(spacing: 12) {
+                                ForEach(dynamicServices) { srv in
+                                    if #available(iOS 26.0, *) {
+                                        Button(action: {
+                                            selectedServiceForBrowser = srv
+                                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                        }) {
+                                            ServiceBannerContent(service: srv)
+                                        }
+                                        .buttonStyle(.glass)
+                                        .padding(.horizontal, 20)
+                                    } else {
+                                        Button(action: {
+                                            selectedServiceForBrowser = srv
+                                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                        }) {
+                                            ServiceBannerContent(service: srv)
+                                        }
+                                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
+                                        .padding(.horizontal, 20)
                                     }
                                 }
-                                .padding(.horizontal, 20)
                             }
+                            .padding(.top, 4)
                         }
-                        .padding(.top, 10)
                     }
                     .padding(.bottom, 110) // legacyTabView padding compensation
                 }
@@ -531,7 +537,11 @@ struct DashboardView: View {
         Task {
             do {
                 let updated = try await APIService.shared.fetchProfile(userId: user.id)
-                await MainActor.run { currentUser = updated; loadTransactions() }
+                await MainActor.run {
+                    currentUser = updated
+                    loadTransactions()
+                    loadDynamicServices()
+                }
             } catch { print("Refresh error: \(error)") }
         }
     }
@@ -695,6 +705,83 @@ struct BtBannerContent: View {
                     .foregroundColor(BankTheme.textMuted)
             }
             Spacer()
+            Image(systemName: "chevron.right")
+                .foregroundColor(BankTheme.textMuted)
+        }
+        .padding(14)
+    }
+}
+
+// MARK: - Dynamic Service Banner Content (Tele2 Style)
+struct ServiceBannerContent: View {
+    let service: BankService
+    
+    var body: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(BankTheme.mint.opacity(0.18))
+                    .frame(width: 44, height: 44)
+                
+                if service.icon_type == "image" {
+                    let imageURL: URL? = {
+                        if service.icon_value.hasPrefix("http://") || service.icon_value.hasPrefix("https://") {
+                            return URL(string: service.icon_value)
+                        } else {
+                            return URL(string: "\(APIService.shared.cleanBaseURL)\(service.icon_value)")
+                        }
+                    }()
+                    
+                    if let imageURL = imageURL {
+                        AsyncImage(url: imageURL) { phase in
+                            switch phase {
+                            case .success(let image):
+                                image
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 24, height: 24)
+                            case .failure:
+                                Image(systemName: "app.fill")
+                                    .font(.system(size: 20))
+                                    .foregroundColor(BankTheme.mint)
+                            case .empty:
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: BankTheme.mint))
+                                    .scaleEffect(0.7)
+                            @unknown default:
+                                Image(systemName: "app.fill")
+                                    .font(.system(size: 20))
+                                    .foregroundColor(BankTheme.mint)
+                            }
+                        }
+                    } else {
+                        Image(systemName: "app.fill")
+                            .font(.system(size: 20))
+                            .foregroundColor(BankTheme.mint)
+                    }
+                } else {
+                    Image(systemName: service.icon_value.isEmpty ? "sparkles" : service.icon_value)
+                        .font(.system(size: 20))
+                        .foregroundColor(BankTheme.mint)
+                }
+            }
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(service.title)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+                
+                if let sub = service.subtitle, !sub.isEmpty {
+                    Text(sub)
+                        .font(.system(size: 12))
+                        .foregroundColor(BankTheme.textMuted)
+                        .lineLimit(1)
+                }
+            }
+            
+            Spacer()
+            
             Image(systemName: "chevron.right")
                 .foregroundColor(BankTheme.textMuted)
         }

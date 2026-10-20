@@ -68,9 +68,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/heads/main')
         with:
-          tag_name: v1.0.21
-          name: "RoPay iOS v1.0.21 - Real Voice Support Call with SFSpeechRecognizer & Minimal Call Icon"
-          body: "RoPay v1.0.21: Кнопка звонка заменена на компактную иконку; полноценный голосовой звонок со сквозным распознаванием речи через микрофон, удалены лишние кнопки и значок интеллекта, вверху строго заголовок Поддержка."
+          tag_name: v1.0.22
+          name: "RoPay iOS v1.0.22 - Dynamic Tele2 Services, In-App Browser & Clean Home View"
+          body: "RoPay v1.0.22: Динамические кнопки сервисов (в стиле Tele2) с сервера; безопасный встроенный браузер с защитой от внешнего открытия; история операций перенесена во вкладку История; звонки полностью удалены."
           files: build/ClientBank.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

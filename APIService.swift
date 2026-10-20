@@ -519,5 +519,18 @@ class APIService: ObservableObject {
         req.httpMethod = "POST"
         URLSession.shared.dataTask(with: req).resume()
     }
+    
+    // MARK: - Dynamic Services (Tele2 Style)
+    func fetchServices() async throws -> [BankService] {
+        guard let url = URL(string: "\(cleanBaseURL)/api/services") else {
+            throw URLError(.badURL)
+        }
+        let (data, response) = try await URLSession.shared.data(from: url)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
+        let res = try JSONDecoder().decode(ServicesResponse.self, from: data)
+        return res.services
+    }
 }
 

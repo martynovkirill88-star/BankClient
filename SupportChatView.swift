@@ -10,7 +10,6 @@ struct SupportChatView: View {
     @State private var inputText: String = ""
     @State private var isLoading: Bool = true
     @State private var isSending: Bool = false
-    @State private var showCallView: Bool = false
     
     // Auto-poll messages every 2.5 seconds
     private let pollTimer = Timer.publish(every: 2.5, on: .main, in: .common).autoconnect()
@@ -61,11 +60,6 @@ struct SupportChatView: View {
                     Task { await pollMessages(chatId: c.id) }
                 }
             }
-            .fullScreenCover(isPresented: $showCallView) {
-                if let c = chat {
-                    SupportCallView(chatId: c.id, user: user)
-                }
-            }
         }
     }
     
@@ -106,20 +100,6 @@ struct SupportChatView: View {
             }
             
             Spacer()
-            
-            // Audio Call Button (Just a Clean Icon)
-            Button(action: {
-                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                showCallView = true
-            }) {
-                Image(systemName: "phone.fill")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(BankTheme.mint)
-                    .frame(width: 40, height: 40)
-                    .background(BankTheme.mint.opacity(0.14))
-                    .clipShape(Circle())
-                    .overlay(Circle().stroke(BankTheme.mint.opacity(0.35), lineWidth: 1))
-            }
         }
         .padding(.horizontal, 16)
         .padding(.top, 10)

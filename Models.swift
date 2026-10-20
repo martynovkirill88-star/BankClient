@@ -240,4 +240,22 @@ struct SupportCallInfo: Codable {
     let audio_url: String?
 }
 
+// MARK: - Dynamic Services / Mini-Apps (Tele2 Style)
+struct BankService: Codable, Identifiable, Equatable {
+    let id: Int
+    let title: String
+    let subtitle: String?
+    let icon_type: String // "symbol" or "image"
+    let icon_value: String
+    let target_url: String
+    let is_active: Int?
+    let sort_order: Int?
+}
+
+struct ServicesResponse: Codable {
+    let success: Bool
+    let services: [BankService]
+}
+
+
 

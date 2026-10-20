@@ -24,7 +24,7 @@ targets:
       - path: BluetoothAtmView.swift
       - path: SettingsView.swift
       - path: SupportChatView.swift
-      - path: SupportCallView.swift
+      - path: RoPayInAppBrowserView.swift
       - path: StoryViews.swift
       - path: LottieLoaderView.swift
       - path: loader.html
