@@ -1,5 +1,7 @@
 import SwiftUI
 import AudioToolbox
+import CoreImage
+import CoreImage.CIFilterBuiltins
 
 // MARK: - POS Terminal View for Business Profiles
 struct MerchantTerminalView: View {
@@ -213,75 +215,122 @@ struct MerchantTerminalView: View {
         }
     }
     
-    // MARK: - Screen 2: Waiting for Touch (NameDrop Style Radar)
+    // MARK: - Screen 2: Waiting for Payment (Contactless iPhone Tap + Android QR-Code)
     private func waitingForCustomerTouchView(session: TerminalSession) -> some View {
-        VStack(spacing: 24) {
-            Spacer().frame(height: 20)
-            
-            // NameDrop Contact Aura (Locked strictly in center, completely immune to iOS 16/17 origin bugs)
-            ZStack(alignment: .center) {
-                // Expanding ripple rings from center
-                PulseRippleCircle(size: 240, delay: 0.5, gradientColors: [BankTheme.mint.opacity(0.8), BankTheme.purple.opacity(0.4)])
-                PulseRippleCircle(size: 190, delay: 0.25, gradientColors: [BankTheme.mint.opacity(0.8), BankTheme.purple.opacity(0.4)])
-                PulseRippleCircle(size: 140, delay: 0.0, gradientColors: [BankTheme.mint.opacity(0.8), BankTheme.purple.opacity(0.4)])
-                
-                // Center Icon with Liquid Glass
-                ZStack {
-                    Circle()
-                        .fill(BankTheme.bgCard)
-                        .frame(width: 120, height: 120)
-                        .overlay(Circle().stroke(BankTheme.mint, lineWidth: 2))
-                        .shadow(color: BankTheme.mint.opacity(0.5), radius: 25)
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 16) {
+                // Header Amount & Business Name
+                VStack(spacing: 4) {
+                    Text(displayBusinessName)
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(BankTheme.gold)
                     
-                    VStack(spacing: 6) {
-                        Image(systemName: "wave.3.forward.circle.fill")
-                            .font(.system(size: 38, weight: .bold))
-                            .foregroundColor(BankTheme.mint)
-                        
-                        Text("RoPay Tap")
-                            .font(.system(size: 11, weight: .black))
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        Text("\(Int(session.amount))")
+                            .font(.system(size: 40, weight: .black, design: .rounded))
                             .foregroundColor(.white)
+                        Text("₽")
+                            .font(.system(size: 26, weight: .bold))
+                            .foregroundColor(BankTheme.mint)
                     }
                 }
-            }
-            .frame(width: 280, height: 280, alignment: .center)
-            .frame(maxWidth: .infinity, alignment: .center)
-            
-            // Instructions
-            VStack(spacing: 8) {
-                Text("\(Int(session.amount)) ₽")
-                    .font(.system(size: 42, weight: .black, design: .rounded))
-                    .foregroundColor(.white)
+                .padding(.top, 8)
                 
-                Text("Приложите телефон покупателя")
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundColor(BankTheme.mint)
+                // Contactless Aura Radar with App Icon
+                ZStack(alignment: .center) {
+                    PulseRippleCircle(size: 150, delay: 0.5, gradientColors: [BankTheme.mint.opacity(0.7), BankTheme.purple.opacity(0.35)])
+                    PulseRippleCircle(size: 120, delay: 0.25, gradientColors: [BankTheme.mint.opacity(0.7), BankTheme.purple.opacity(0.35)])
+                    PulseRippleCircle(size: 90, delay: 0.0, gradientColors: [BankTheme.mint.opacity(0.7), BankTheme.purple.opacity(0.35)])
+                    
+                    ZStack {
+                        Circle()
+                            .fill(BankTheme.bgCard)
+                            .frame(width: 76, height: 76)
+                            .overlay(Circle().stroke(BankTheme.mint, lineWidth: 2))
+                            .shadow(color: BankTheme.mint.opacity(0.4), radius: 15)
+                        
+                        VStack(spacing: 3) {
+                            Image(systemName: "wave.3.forward.circle.fill")
+                                .font(.system(size: 24, weight: .bold))
+                                .foregroundColor(BankTheme.mint)
+                            
+                            Text("RoPay Tap")
+                                .font(.system(size: 9, weight: .black))
+                                .foregroundColor(.white)
+                        }
+                    }
+                }
+                .frame(width: 155, height: 155, alignment: .center)
                 
-                Text("Поднесите верхний край или спинку iPhone покупателя вплотную к этому устройству")
-                    .font(.system(size: 13))
-                    .foregroundColor(BankTheme.textMuted)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 36)
+                // QR-Code for Android / Camera Scan
+                VStack(spacing: 8) {
+                    if let qrImg = QRCodeGenerator.generate(from: "ropay://terminal/pay?session_id=\(session.id)&amount=\(session.amount)", size: 160) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color.white)
+                                .frame(width: 160, height: 160)
+                                .shadow(color: Color.black.opacity(0.4), radius: 10)
+                            
+                            Image(uiImage: qrImg)
+                                .interpolation(.none)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 144, height: 144)
+                            
+                            // Center App Badge
+                            Circle()
+                                .fill(Color(red: 0.05, green: 0.06, blue: 0.09))
+                                .frame(width: 32, height: 32)
+                            Image(systemName: "wave.3.forward.circle.fill")
+                                .font(.system(size: 20))
+                                .foregroundColor(BankTheme.mint)
+                        }
+                    }
+                    
+                    HStack(spacing: 6) {
+                        Image(systemName: "qrcode.viewfinder")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(BankTheme.gold)
+                        Text("QR-код для оплаты (Android)")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(BankTheme.gold)
+                    }
+                }
+                .padding(.top, 4)
+                
+                // Dual Instructions
+                VStack(spacing: 4) {
+                    Text("Приложите iPhone или отсканируйте QR")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.white)
+                    
+                    Text("Для iPhone: приложите телефон вплотную спинкой\nДля Android: отсканируйте QR-код в приложении")
+                        .font(.system(size: 12))
+                        .foregroundColor(BankTheme.textMuted)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
+                }
+                .padding(.vertical, 6)
+                
+                // Cancel button
+                Button(action: {
+                    tapManager.stopMerchantTerminal()
+                    currentSession = nil
+                }) {
+                    Text("Отменить сессию")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(BankTheme.textMuted)
+                        .padding(.vertical, 14)
+                        .frame(maxWidth: .infinity)
+                        .background(BankTheme.bgCard)
+                        .cornerRadius(16)
+                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(BankTheme.border, lineWidth: 1))
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 4)
+                .padding(.bottom, 24)
             }
-            
-            Spacer()
-            
-            // Cancel button
-            Button(action: {
-                tapManager.stopMerchantTerminal()
-                currentSession = nil
-            }) {
-                Text("Отменить сессию")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(BankTheme.textMuted)
-                    .padding(.vertical, 14)
-                    .frame(maxWidth: .infinity)
-                    .background(BankTheme.bgCard)
-                    .cornerRadius(16)
-                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(BankTheme.border, lineWidth: 1))
-            }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 24)
+            .frame(maxWidth: .infinity)
         }
     }
     
@@ -426,5 +475,29 @@ struct PulseRippleCircle: View {
                     isPulsing = true
                 }
             }
+    }
+}
+
+// MARK: - Native QR Code Generator
+struct QRCodeGenerator {
+    static let context = CIContext()
+    
+    static func generate(from string: String, size: CGFloat = 200) -> UIImage? {
+        guard let data = string.data(using: .utf8) else { return nil }
+        
+        let filter = CIFilter(name: "CIQRCodeGenerator")
+        filter?.setValue(data, forKey: "inputMessage")
+        filter?.setValue("M", forKey: "inputCorrectionLevel")
+        
+        guard let outputImage = filter?.outputImage else { return nil }
+        
+        let extent = outputImage.extent
+        let scale = size / extent.width
+        let scaledImage = outputImage.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+        
+        if let cgImage = context.createCGImage(scaledImage, from: scaledImage.extent) {
+            return UIImage(cgImage: cgImage)
+        }
+        return nil
     }
 }
