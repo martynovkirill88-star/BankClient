@@ -68,9 +68,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/heads/main')
         with:
-          tag_name: v1.0.24
-          name: "RoPay iOS v1.0.24 - RoPay Tap Phone-to-Phone Contactless Payments & POS Terminal"
-          body: "RoPay v1.0.24: Бесконтактная оплата телефон к телефону (RoPay Tap) в стиле Apple NameDrop / Tap to Pay; Штатное системное окно Apple NFC («Приложите iPhone к терминалу»); Терминал приёма оплаты для бизнес-профилей; Определение физического касания телефонов с виброоткликом и звуком Haptic; Face ID подтверждение списания."
+          tag_name: v1.0.25
+          name: "RoPay iOS v1.0.25 - POS Terminal Bluetooth Button Match & Decoding Fix"
+          body: "RoPay v1.0.25: Идентичный дизайн кнопки терминала как у баннера Bluetooth; фикс декодирования сессии терминала для приёма оплаты касанием."
           files: build/ClientBank.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

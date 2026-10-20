@@ -43,6 +43,30 @@ struct TerminalSession: Codable, Identifiable {
     let buyer_name: String?
     let created_at: String?
     let paid_at: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case id, session_id, merchant_id, merchant_name, amount, description, status, buyer_id, buyer_name, created_at, paid_at
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        if let idVal = try? container.decode(String.self, forKey: .id), !idVal.isEmpty {
+            self.id = idVal
+        } else if let sidVal = try? container.decode(String.self, forKey: .session_id), !sidVal.isEmpty {
+            self.id = sidVal
+        } else {
+            self.id = ""
+        }
+        self.merchant_id = (try? container.decode(Int.self, forKey: .merchant_id)) ?? 0
+        self.merchant_name = (try? container.decode(String.self, forKey: .merchant_name)) ?? "Терминал RoPay"
+        self.amount = (try? container.decode(Double.self, forKey: .amount)) ?? 0.0
+        self.description = try? container.decodeIfPresent(String.self, forKey: .description)
+        self.status = (try? container.decode(String.self, forKey: .status)) ?? "waiting"
+        self.buyer_id = try? container.decodeIfPresent(Int.self, forKey: .buyer_id)
+        self.buyer_name = try? container.decodeIfPresent(String.self, forKey: .buyer_name)
+        self.created_at = try? container.decodeIfPresent(String.self, forKey: .created_at)
+        self.paid_at = try? container.decodeIfPresent(String.self, forKey: .paid_at)
+    }
 }
 
 struct TerminalSessionResponse: Codable {

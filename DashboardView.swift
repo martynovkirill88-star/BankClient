@@ -428,43 +428,19 @@ struct DashboardView: View {
                         
                         // ── Business Profile: POS Terminal Button ─────────────
                         if currentUser?.isBusinessAccount == true {
-                            Button(action: { showMerchantTerminalSheet = true }) {
-                                HStack(spacing: 14) {
-                                    ZStack {
-                                        Circle()
-                                            .fill(BankTheme.gold.opacity(0.22))
-                                            .frame(width: 44, height: 44)
-                                        Image(systemName: "wave.3.forward.circle.fill")
-                                            .font(.system(size: 22))
-                                            .foregroundColor(BankTheme.gold)
-                                    }
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        HStack(spacing: 6) {
-                                            Text("Терминал приёма оплаты")
-                                                .font(.system(size: 14, weight: .bold))
-                                                .foregroundColor(.white)
-                                            Text("БИЗНЕС")
-                                                .font(.system(size: 9, weight: .black))
-                                                .foregroundColor(BankTheme.gold)
-                                                .padding(.horizontal, 6)
-                                                .padding(.vertical, 2)
-                                                .background(BankTheme.gold.opacity(0.18))
-                                                .cornerRadius(6)
-                                        }
-                                        Text(currentUser?.business_name?.isEmpty == false ? currentUser!.business_name! : "Приём оплат касанием (RoPay Tap)")
-                                            .font(.system(size: 12))
-                                            .foregroundColor(BankTheme.textMuted)
-                                            .lineLimit(1)
-                                    }
-                                    Spacer()
-                                    Image(systemName: "chevron.right")
-                                        .foregroundColor(BankTheme.textMuted)
+                            if #available(iOS 26.0, *) {
+                                Button(action: { showMerchantTerminalSheet = true }) {
+                                    TerminalBannerContent(businessName: currentUser?.business_name ?? "")
                                 }
-                                .padding(14)
+                                .buttonStyle(.glass)
+                                .padding(.horizontal, 20)
+                            } else {
+                                Button(action: { showMerchantTerminalSheet = true }) {
+                                    TerminalBannerContent(businessName: currentUser?.business_name ?? "")
+                                }
+                                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
+                                .padding(.horizontal, 20)
                             }
-                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
-                            .overlay(RoundedRectangle(cornerRadius: 18).stroke(BankTheme.gold.opacity(0.5), lineWidth: 1.5))
-                            .padding(.horizontal, 20)
                         }
                         
                         // ── Dynamic Services (Tele2 Style Buttons) ────────
@@ -776,6 +752,36 @@ struct BtBannerContent: View {
                     .font(.system(size: 14, weight: .bold))
                     .foregroundColor(.white)
                 Text(btManager.isAtmNearby ? "Нажмите для мгновенного входа" : "Поднесите телефон к банкомату")
+                    .font(.system(size: 12))
+                    .foregroundColor(BankTheme.textMuted)
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .foregroundColor(BankTheme.textMuted)
+        }
+        .padding(14)
+    }
+}
+
+// MARK: - POS Terminal Banner Content (Exact Copy of BtBannerContent with Terminal Text)
+struct TerminalBannerContent: View {
+    let businessName: String
+    
+    var body: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(BankTheme.purple.opacity(0.22))
+                    .frame(width: 44, height: 44)
+                Image(systemName: "wave.3.forward.circle.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(BankTheme.purple)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Терминал приёма оплаты")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.white)
+                Text(businessName.isEmpty ? "Приём оплат касанием (RoPay Tap)" : businessName)
                     .font(.system(size: 12))
                     .foregroundColor(BankTheme.textMuted)
             }
