@@ -68,9 +68,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/heads/main')
         with:
-          tag_name: v1.0.20
-          name: "RoPay iOS v1.0.20 - AI Support Chat, Neural Voice Call & Hold Music"
-          body: "RoPay v1.0.20: В настройки добавлен чат поддержки с интеллектуальным ботом-помощником, голосовой аудиозвонок с синтезом речи Microsoft Neural Voice, переключение на оператора банка и музыка ожидания."
+          tag_name: v1.0.21
+          name: "RoPay iOS v1.0.21 - Real Voice Support Call with SFSpeechRecognizer & Minimal Call Icon"
+          body: "RoPay v1.0.21: Кнопка звонка заменена на компактную иконку; полноценный голосовой звонок со сквозным распознаванием речи через микрофон, удалены лишние кнопки и значок интеллекта, вверху строго заголовок Поддержка."
           files: build/ClientBank.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

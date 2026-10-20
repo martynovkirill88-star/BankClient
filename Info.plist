@@ -77,6 +77,8 @@
 	<string>Приложение использует контакты для быстрого перевода средств клиентам банка RoPay.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Используется для голосового общения со службой поддержки и ботом RoPay.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Используется для распознавания вашей речи во время звонка в поддержку RoPay.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>

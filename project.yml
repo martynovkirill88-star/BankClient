@@ -46,5 +46,6 @@ targets:
       INFOPLIST_KEY_NSCameraUsageDescription: "Используется для биометрической верификации лица и Face ID."
       INFOPLIST_KEY_NSContactsUsageDescription: "Приложение использует контакты для быстрого перевода средств клиентам банка RoPay."
       INFOPLIST_KEY_NSMicrophoneUsageDescription: "Используется для голосового общения со службой поддержки и ботом RoPay."
+      INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "Используется для распознавания вашей речи во время звонка в поддержку RoPay."
 
 

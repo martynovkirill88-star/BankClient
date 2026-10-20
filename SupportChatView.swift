@@ -107,29 +107,18 @@ struct SupportChatView: View {
             
             Spacer()
             
-            // Audio Call Button
+            // Audio Call Button (Just a Clean Icon)
             Button(action: {
                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 showCallView = true
             }) {
-                HStack(spacing: 6) {
-                    Image(systemName: "phone.fill")
-                        .font(.system(size: 14, weight: .bold))
-                    Text("Звонок")
-                        .font(.system(size: 12, weight: .bold))
-                }
-                .foregroundColor(.black)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(
-                    LinearGradient(
-                        colors: [BankTheme.mint, Color.yellow],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .cornerRadius(18)
-                .shadow(color: BankTheme.mint.opacity(0.35), radius: 6, x: 0, y: 2)
+                Image(systemName: "phone.fill")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(BankTheme.mint)
+                    .frame(width: 40, height: 40)
+                    .background(BankTheme.mint.opacity(0.14))
+                    .clipShape(Circle())
+                    .overlay(Circle().stroke(BankTheme.mint.opacity(0.35), lineWidth: 1))
             }
         }
         .padding(.horizontal, 16)
