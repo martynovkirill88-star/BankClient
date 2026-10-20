@@ -51,6 +51,7 @@ jobs:
           plutil -convert xml1 build/Payload/ClientBank.app/Info.plist
           cp AppIcon*.png build/Payload/ClientBank.app/ || true
           cp Icon*.png build/Payload/ClientBank.app/ || true
+          cp loader.html build/Payload/ClientBank.app/ || true
           cd build
           zip -r ClientBank.ipa Payload
           rm -rf Payload
@@ -67,9 +68,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/heads/main')
         with:
-          tag_name: v1.0.17
-          name: "RoPay iOS v1.0.17 - Native TabView Liquid Glass"
-          body: "Нативный TabView с Liquid Glass и tabBarMinimizeBehavior(.onScrollDown) для iOS 18+. Fallback для iOS 16/17."
+          tag_name: v1.0.18
+          name: "RoPay iOS v1.0.18 - Two-Step Transfer & Anti-Spam Security with White Lottie Loader"
+          body: "RoPay v1.0.18: Двухэтапная система переводов (ввод -> кнопка 'Продолжить' -> сверка данных -> кнопка 'Подтвердить'), серверная антиспам-проверка транзакций и белый анимированный лоадер Lottie."
           files: build/ClientBank.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

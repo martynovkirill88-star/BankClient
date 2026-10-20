@@ -24,6 +24,8 @@ targets:
       - path: BluetoothAtmView.swift
       - path: SettingsView.swift
       - path: StoryViews.swift
+      - path: LottieLoaderView.swift
+      - path: loader.html
       - path: Assets.xcassets
       - path: RoPayLogo.png
     info:
