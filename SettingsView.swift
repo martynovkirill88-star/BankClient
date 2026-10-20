@@ -85,6 +85,7 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     
     @State private var showSupportChat: Bool = false
+    @State private var showTelegramOptions: Bool = false
     
     var body: some View {
         NavigationStack {
@@ -139,76 +140,72 @@ struct SettingsView: View {
                         }
                         .padding(.top, 24)
                         
-                        // SUPPORT 24/7 BUTTON
-                        Button(action: {
-                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                            showSupportChat = true
-                        }) {
-                            HStack(spacing: 14) {
-                                ZStack {
-                                    Circle()
-                                        .fill(
-                                            LinearGradient(
-                                                colors: [BankTheme.mint.opacity(0.3), BankTheme.purple.opacity(0.4)],
-                                                startPoint: .topLeading,
-                                                endPoint: .bottomTrailing
-                                            )
-                                        )
-                                        .frame(width: 48, height: 48)
-                                    Image(systemName: "bubble.left.and.bubble.right.fill")
-                                        .font(.system(size: 20))
-                                        .foregroundColor(BankTheme.mint)
-                                }
-                                
-                                VStack(alignment: .leading, spacing: 3) {
-                                    HStack(spacing: 6) {
-                                        Text("Служба поддержки")
-                                            .font(.system(size: 16, weight: .bold))
-                                            .foregroundColor(.white)
-                                        
-                                        HStack(spacing: 4) {
-                                            Circle()
-                                                .fill(BankTheme.mint)
-                                                .frame(width: 6, height: 6)
-                                            Text("24/7")
-                                                .font(.system(size: 10, weight: .black))
-                                        }
-                                        .foregroundColor(BankTheme.mint)
-                                        .padding(.horizontal, 6)
-                                        .padding(.vertical, 2)
-                                        .background(BankTheme.mint.opacity(0.12))
-                                        .cornerRadius(6)
-                                    }
-                                    
-                                    Text("Бот-помощник и голосовой звонок")
-                                        .font(.system(size: 12))
-                                        .foregroundColor(BankTheme.textMuted)
-                                }
-                                
-                                Spacer()
-                                
-                                Image(systemName: "chevron.right")
-                                    .font(.system(size: 14, weight: .bold))
-                                    .foregroundColor(BankTheme.textMuted.opacity(0.7))
-                            }
-                            .padding(16)
-                            .background(
-                                RoundedRectangle(cornerRadius: 20)
-                                    .fill(BankTheme.bgCard)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 20)
-                                            .stroke(
-                                                LinearGradient(
-                                                    colors: [BankTheme.mint.opacity(0.4), BankTheme.purple.opacity(0.2)],
-                                                    startPoint: .topLeading,
-                                                    endPoint: .bottomTrailing
-                                                ),
-                                                lineWidth: 1.5
-                                            )
+                        // ── SUPPORT & TELEGRAM BUTTONS (Styled identical to Terminal & Bluetooth Banner) ──
+                        VStack(spacing: 12) {
+                            // 1. In-App Support Chat
+                            if #available(iOS 26.0, *) {
+                                Button(action: {
+                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                    showSupportChat = true
+                                }) {
+                                    SettingsBannerButton(
+                                        title: "Служба поддержки",
+                                        subtitle: "Чат с банком и голосовой помощник",
+                                        icon: "bubble.left.and.bubble.right.fill",
+                                        tintColor: BankTheme.purple,
+                                        badge: "24/7"
                                     )
-                            )
+                                }
+                                .buttonStyle(.glass)
+                                .padding(.horizontal, 20)
+                            } else {
+                                Button(action: {
+                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                    showSupportChat = true
+                                }) {
+                                    SettingsBannerButton(
+                                        title: "Служба поддержки",
+                                        subtitle: "Чат с банком и голосовой помощник",
+                                        icon: "bubble.left.and.bubble.right.fill",
+                                        tintColor: BankTheme.purple,
+                                        badge: "24/7"
+                                    )
+                                }
+                                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
+                                .padding(.horizontal, 20)
+                            }
+                            
+                            // 2. Telegram Support Button
+                            if #available(iOS 26.0, *) {
+                                Button(action: {
+                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                    showTelegramOptions = true
+                                }) {
+                                    SettingsBannerButton(
+                                        title: "Поддержка в Telegram",
+                                        subtitle: "@martynovkirill88 • @RodVibeMeg",
+                                        icon: "paperplane.fill",
+                                        tintColor: Color(hex: "#229ED9")
+                                    )
+                                }
+                                .buttonStyle(.glass)
+                                .padding(.horizontal, 20)
+                            } else {
+                                Button(action: {
+                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                    showTelegramOptions = true
+                                }) {
+                                    SettingsBannerButton(
+                                        title: "Поддержка в Telegram",
+                                        subtitle: "@martynovkirill88 • @RodVibeMeg",
+                                        icon: "paperplane.fill",
+                                        tintColor: Color(hex: "#229ED9")
+                                    )
+                                }
+                                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
+                                .padding(.horizontal, 20)
+                            }
                         }
-                        .padding(.horizontal, 20)
                         
                         // APP INFO & LOGOUT
                         VStack(spacing: 14) {
@@ -245,7 +242,7 @@ struct SettingsView: View {
                                 }
                             }
                             
-                            Text("RoPay iOS • Версия 1.0.20")
+                            Text("RoPay iOS • Версия 1.0.27")
                                 .font(.system(size: 12))
                                 .foregroundColor(BankTheme.textMuted)
                                 .padding(.top, 4)
@@ -271,11 +268,77 @@ struct SettingsView: View {
             .sheet(isPresented: $showSupportChat) {
                 SupportChatView(user: currentUser)
             }
+            .confirmationDialog("Поддержка в Telegram", isPresented: $showTelegramOptions, titleVisibility: .visible) {
+                Button("Кирилл Мартынов (@martynovkirill88)") {
+                    openTelegram(username: "martynovkirill88")
+                }
+                Button("Поддержка (@RodVibeMeg)") {
+                    openTelegram(username: "RodVibeMeg")
+                }
+                Button("Отмена", role: .cancel) { }
+            } message: {
+                Text("Выберите специалиста для связи в Telegram")
+            }
             .onAppear {
                 if let u = currentUser {
                     APIService.shared.reportTelemetry(userId: u.id)
                 }
             }
         }
+    }
+    
+    private func openTelegram(username: String) {
+        let clean = username.replacingOccurrences(of: "@", with: "")
+        if let appUrl = URL(string: "tg://resolve?domain=\(clean)"), UIApplication.shared.canOpenURL(appUrl) {
+            UIApplication.shared.open(appUrl)
+        } else if let webUrl = URL(string: "https://t.me/\(clean)") {
+            UIApplication.shared.open(webUrl)
+        }
+    }
+}
+
+// MARK: - Settings Banner Button (Exact Clone of Terminal & Bluetooth Banner)
+struct SettingsBannerButton: View {
+    let title: String
+    let subtitle: String
+    let icon: String
+    let tintColor: Color
+    var badge: String? = nil
+    
+    var body: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(tintColor.opacity(0.22))
+                    .frame(width: 44, height: 44)
+                Image(systemName: icon)
+                    .font(.system(size: 20))
+                    .foregroundColor(tintColor)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(title)
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.white)
+                    if let b = badge {
+                        Text(b)
+                            .font(.system(size: 9, weight: .black))
+                            .foregroundColor(tintColor)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(tintColor.opacity(0.18))
+                            .cornerRadius(6)
+                    }
+                }
+                Text(subtitle)
+                    .font(.system(size: 12))
+                    .foregroundColor(BankTheme.textMuted)
+                    .lineLimit(1)
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .foregroundColor(BankTheme.textMuted)
+        }
+        .padding(14)
     }
 }

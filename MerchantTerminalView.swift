@@ -215,8 +215,8 @@ struct MerchantTerminalView: View {
         VStack(spacing: 24) {
             Spacer().frame(height: 20)
             
-            // NameDrop Contact Aura
-            ZStack {
+            // NameDrop Contact Aura (Centered strictly with anchor: .center for iOS 16/17 compatibility)
+            ZStack(alignment: .center) {
                 // Expanding ripple rings
                 ForEach(0..<3) { i in
                     Circle()
@@ -228,9 +228,9 @@ struct MerchantTerminalView: View {
                             ),
                             lineWidth: 2
                         )
-                        .frame(width: 140 + CGFloat(i * 60), height: 140 + CGFloat(i * 60))
-                        .scaleEffect(waveScale)
-                        .opacity(waveOpacity - Double(i) * 0.25)
+                        .frame(width: 140 + CGFloat(i * 55), height: 140 + CGFloat(i * 55))
+                        .scaleEffect(waveScale, anchor: .center)
+                        .opacity(max(0.05, waveOpacity - Double(i) * 0.25))
                         .animation(
                             .easeInOut(duration: 1.8)
                                 .repeatForever(autoreverses: true)
@@ -258,7 +258,8 @@ struct MerchantTerminalView: View {
                     }
                 }
             }
-            .frame(height: 260)
+            .frame(width: 280, height: 280, alignment: .center)
+            .frame(maxWidth: .infinity, alignment: .center)
             .onAppear {
                 waveScale = 1.15
                 waveOpacity = 0.3

@@ -57,8 +57,8 @@ struct BuyerTapPayView: View {
         VStack(spacing: 24) {
             Spacer().frame(height: 30)
             
-            // NameDrop animated concentric glow rings
-            ZStack {
+            // NameDrop animated concentric glow rings (Centered strictly with anchor: .center for iOS 16/17 compatibility)
+            ZStack(alignment: .center) {
                 ForEach(0..<3) { i in
                     Circle()
                         .stroke(
@@ -70,8 +70,8 @@ struct BuyerTapPayView: View {
                             lineWidth: 2
                         )
                         .frame(width: 140 + CGFloat(i * 55), height: 140 + CGFloat(i * 55))
-                        .scaleEffect(waveScale)
-                        .opacity(0.7 - Double(i) * 0.2)
+                        .scaleEffect(waveScale, anchor: .center)
+                        .opacity(max(0.05, 0.7 - Double(i) * 0.2))
                         .animation(
                             .easeInOut(duration: 1.6)
                                 .repeatForever(autoreverses: true)
@@ -92,7 +92,8 @@ struct BuyerTapPayView: View {
                         .foregroundColor(BankTheme.mint)
                 }
             }
-            .frame(height: 260)
+            .frame(width: 280, height: 280, alignment: .center)
+            .frame(maxWidth: .infinity, alignment: .center)
             .onAppear { waveScale = 1.15 }
             
             VStack(spacing: 10) {
