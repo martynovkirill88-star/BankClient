@@ -40,10 +40,13 @@ struct MerchantTerminalView: View {
                 
                 if isPaidSuccess {
                     successReceiptView
+                        .transition(.identity)
                 } else if let session = currentSession {
                     waitingForCustomerTouchView(session: session)
+                        .transition(.identity)
                 } else {
                     keypadInputView
+                        .transition(.identity)
                 }
             }
             .navigationTitle("RoPay Tap: Терминал")
@@ -215,29 +218,12 @@ struct MerchantTerminalView: View {
         VStack(spacing: 24) {
             Spacer().frame(height: 20)
             
-            // NameDrop Contact Aura (Centered strictly with anchor: .center for iOS 16/17 compatibility)
+            // NameDrop Contact Aura (Locked strictly in center, completely immune to iOS 16/17 origin bugs)
             ZStack(alignment: .center) {
-                // Expanding ripple rings
-                ForEach(0..<3) { i in
-                    Circle()
-                        .stroke(
-                            LinearGradient(
-                                colors: [BankTheme.mint.opacity(0.8), BankTheme.purple.opacity(0.4)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 2
-                        )
-                        .frame(width: 140 + CGFloat(i * 55), height: 140 + CGFloat(i * 55))
-                        .scaleEffect(waveScale, anchor: .center)
-                        .opacity(max(0.05, waveOpacity - Double(i) * 0.25))
-                        .animation(
-                            .easeInOut(duration: 1.8)
-                                .repeatForever(autoreverses: true)
-                                .delay(Double(i) * 0.3),
-                            value: waveScale
-                        )
-                }
+                // Expanding ripple rings from center
+                PulseRippleCircle(size: 240, delay: 0.5, gradientColors: [BankTheme.mint.opacity(0.8), BankTheme.purple.opacity(0.4)])
+                PulseRippleCircle(size: 190, delay: 0.25, gradientColors: [BankTheme.mint.opacity(0.8), BankTheme.purple.opacity(0.4)])
+                PulseRippleCircle(size: 140, delay: 0.0, gradientColors: [BankTheme.mint.opacity(0.8), BankTheme.purple.opacity(0.4)])
                 
                 // Center Icon with Liquid Glass
                 ZStack {
@@ -260,10 +246,6 @@ struct MerchantTerminalView: View {
             }
             .frame(width: 280, height: 280, alignment: .center)
             .frame(maxWidth: .infinity, alignment: .center)
-            .onAppear {
-                waveScale = 1.15
-                waveOpacity = 0.3
-            }
             
             // Instructions
             VStack(spacing: 8) {
@@ -412,5 +394,37 @@ struct MerchantTerminalView: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Isolated Centered Ripple Circle (Fix for iOS 16/17 layout origin animation)
+struct PulseRippleCircle: View {
+    let size: CGFloat
+    let delay: Double
+    let gradientColors: [Color]
+    @State private var isPulsing: Bool = false
+    
+    var body: some View {
+        Circle()
+            .stroke(
+                LinearGradient(
+                    colors: gradientColors,
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ),
+                lineWidth: 2
+            )
+            .frame(width: size, height: size)
+            .scaleEffect(isPulsing ? 1.15 : 0.92, anchor: .center)
+            .opacity(isPulsing ? 0.25 : 0.75)
+            .onAppear {
+                withAnimation(
+                    .easeInOut(duration: 1.6)
+                        .repeatForever(autoreverses: true)
+                        .delay(delay)
+                ) {
+                    isPulsing = true
+                }
+            }
     }
 }

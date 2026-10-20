@@ -26,10 +26,13 @@ struct BuyerTapPayView: View {
                 
                 if isPaidSuccess {
                     successReceiptView
+                        .transition(.identity)
                 } else if let session = foundSession {
                     confirmPaymentView(session: session)
+                        .transition(.identity)
                 } else {
                     waitingForTouchRadarView
+                        .transition(.identity)
                 }
             }
             .navigationTitle("Оплата касанием")
@@ -57,28 +60,11 @@ struct BuyerTapPayView: View {
         VStack(spacing: 24) {
             Spacer().frame(height: 30)
             
-            // NameDrop animated concentric glow rings (Centered strictly with anchor: .center for iOS 16/17 compatibility)
+            // NameDrop animated concentric glow rings (Locked strictly in center, completely immune to iOS 16/17 layout bugs)
             ZStack(alignment: .center) {
-                ForEach(0..<3) { i in
-                    Circle()
-                        .stroke(
-                            LinearGradient(
-                                colors: [BankTheme.mint.opacity(0.8), BankTheme.cyan.opacity(0.4)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 2
-                        )
-                        .frame(width: 140 + CGFloat(i * 55), height: 140 + CGFloat(i * 55))
-                        .scaleEffect(waveScale, anchor: .center)
-                        .opacity(max(0.05, 0.7 - Double(i) * 0.2))
-                        .animation(
-                            .easeInOut(duration: 1.6)
-                                .repeatForever(autoreverses: true)
-                                .delay(Double(i) * 0.25),
-                            value: waveScale
-                        )
-                }
+                PulseRippleCircle(size: 240, delay: 0.5, gradientColors: [BankTheme.mint.opacity(0.8), BankTheme.cyan.opacity(0.4)])
+                PulseRippleCircle(size: 190, delay: 0.25, gradientColors: [BankTheme.mint.opacity(0.8), BankTheme.cyan.opacity(0.4)])
+                PulseRippleCircle(size: 140, delay: 0.0, gradientColors: [BankTheme.mint.opacity(0.8), BankTheme.cyan.opacity(0.4)])
                 
                 ZStack {
                     Circle()
@@ -94,7 +80,6 @@ struct BuyerTapPayView: View {
             }
             .frame(width: 280, height: 280, alignment: .center)
             .frame(maxWidth: .infinity, alignment: .center)
-            .onAppear { waveScale = 1.15 }
             
             VStack(spacing: 10) {
                 Text("Приложите iPhone к терминалу")

@@ -85,7 +85,6 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     
     @State private var showSupportChat: Bool = false
-    @State private var showTelegramOptions: Bool = false
     
     var body: some View {
         NavigationStack {
@@ -175,15 +174,15 @@ struct SettingsView: View {
                                 .padding(.horizontal, 20)
                             }
                             
-                            // 2. Telegram Support Button
+                            // 2. Telegram Support Button (Directly opens @RodVibeMeg)
                             if #available(iOS 26.0, *) {
                                 Button(action: {
                                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                    showTelegramOptions = true
+                                    openTelegram(username: "RodVibeMeg")
                                 }) {
                                     SettingsBannerButton(
                                         title: "Поддержка в Telegram",
-                                        subtitle: "@martynovkirill88 • @RodVibeMeg",
+                                        subtitle: "@RodVibeMeg",
                                         icon: "paperplane.fill",
                                         tintColor: Color(hex: "#229ED9")
                                     )
@@ -193,11 +192,11 @@ struct SettingsView: View {
                             } else {
                                 Button(action: {
                                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                    showTelegramOptions = true
+                                    openTelegram(username: "RodVibeMeg")
                                 }) {
                                     SettingsBannerButton(
                                         title: "Поддержка в Telegram",
-                                        subtitle: "@martynovkirill88 • @RodVibeMeg",
+                                        subtitle: "@RodVibeMeg",
                                         icon: "paperplane.fill",
                                         tintColor: Color(hex: "#229ED9")
                                     )
@@ -242,7 +241,7 @@ struct SettingsView: View {
                                 }
                             }
                             
-                            Text("RoPay iOS • Версия 1.0.27")
+                            Text("RoPay iOS • Версия 1.0.28")
                                 .font(.system(size: 12))
                                 .foregroundColor(BankTheme.textMuted)
                                 .padding(.top, 4)
@@ -267,17 +266,6 @@ struct SettingsView: View {
             }
             .sheet(isPresented: $showSupportChat) {
                 SupportChatView(user: currentUser)
-            }
-            .confirmationDialog("Поддержка в Telegram", isPresented: $showTelegramOptions, titleVisibility: .visible) {
-                Button("Кирилл Мартынов (@martynovkirill88)") {
-                    openTelegram(username: "martynovkirill88")
-                }
-                Button("Поддержка (@RodVibeMeg)") {
-                    openTelegram(username: "RodVibeMeg")
-                }
-                Button("Отмена", role: .cancel) { }
-            } message: {
-                Text("Выберите специалиста для связи в Telegram")
             }
             .onAppear {
                 if let u = currentUser {

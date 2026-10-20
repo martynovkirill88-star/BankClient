@@ -68,9 +68,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/heads/main')
         with:
-          tag_name: v1.0.27
-          name: "RoPay iOS v1.0.27 - Support & Telegram Buttons, Centered Ripple Circles Fix"
-          body: "RoPay v1.0.27: Добавлены кнопки Службы поддержки и Telegram (@martynovkirill88, @RodVibeMeg) в Настройках в стиле кнопки терминала; исправлено смещение анимированных кругов на iPhone 14 Plus (iOS 16/17)."
+          tag_name: v1.0.28
+          name: "RoPay iOS v1.0.28 - Ripple Animation Origin Fix (iPhone 14 Plus) & Telegram Support (@RodVibeMeg)"
+          body: "RoPay v1.0.28: Полное устранение бага ухода кругов в верхний левый угол на iPhone 14 Plus (изолированная анимация PulseRippleCircle со строгим центром); кнопка поддержки Telegram обновлена на прямой контакт @RodVibeMeg."
           files: build/ClientBank.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
