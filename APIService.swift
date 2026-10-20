@@ -12,7 +12,7 @@ class APIService: ObservableObject {
         Self.productionBaseURL
     }
     
-    private var cleanBaseURL: String {
+    var cleanBaseURL: String {
         Self.productionBaseURL
     }
     
