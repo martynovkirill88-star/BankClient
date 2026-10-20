@@ -56,54 +56,20 @@ jobs:
           rm -rf Payload
           cd ..
 
-      - name: Build and Archive AdminBank
-        run: |
-          xcodebuild archive \
-            -project ClientBank.xcodeproj \
-            -scheme AdminBank \
-            -destination 'generic/platform=iOS' \
-            -archivePath build/AdminBank.xcarchive \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            AD_HOC_CODE_SIGNING_ALLOWED=YES
-
-      - name: Package Payload to AdminBank.ipa
-        run: |
-          mkdir -p build/AdminPayload
-          cp -r build/AdminBank.xcarchive/Products/Applications/AdminBank.app build/AdminPayload/
-          cp Admin/AdminInfo.plist build/AdminPayload/AdminBank.app/Info.plist
-          plutil -replace CFBundleIdentifier -string "ru.martynov.ropayadmin" build/AdminPayload/AdminBank.app/Info.plist
-          plutil -replace CFBundleExecutable -string "AdminBank" build/AdminPayload/AdminBank.app/Info.plist
-          plutil -replace CFBundleName -string "RoPay Admin" build/AdminPayload/AdminBank.app/Info.plist
-          plutil -replace CFBundleDisplayName -string "RoPay Admin" build/AdminPayload/AdminBank.app/Info.plist
-          plutil -replace MinimumOSVersion -string "16.0" build/AdminPayload/AdminBank.app/Info.plist
-          plutil -convert xml1 build/AdminPayload/AdminBank.app/Info.plist
-          cd build
-          mv AdminPayload Payload
-          zip -r AdminBank.ipa Payload
-          rm -rf Payload
-          cd ..
-
-      - name: Upload IPA Artifacts
+      - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: RoPay-IPAs
-          path: |
-            build/ClientBank.ipa
-            build/AdminBank.ipa
+          name: ClientBank-IPA
+          path: build/ClientBank.ipa
           retention-days: 7
 
-      - name: Publish Release (Direct IPAs Download)
+      - name: Publish Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/heads/main')
         with:
-          tag_name: v1.0.16
-          name: "RoPay iOS v1.0.16 (Client Bank + Admin App with Stories & Applications)"
-          body: "RoPay v1.0.16: В релиз включены оба приложения: RoPay для клиентов банка (со статусами и подачей заявок) и RoPay Admin для администратора (одобрение заявок, публикация историй для iOS/Android и управление балансами)."
-          files: |
-            build/ClientBank.ipa
-            build/AdminBank.ipa
+          tag_name: v1.0.17
+          name: "RoPay iOS v1.0.17 - Native TabView Liquid Glass"
+          body: "Нативный TabView с Liquid Glass и tabBarMinimizeBehavior(.onScrollDown) для iOS 18+. Fallback для iOS 16/17."
+          files: build/ClientBank.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
