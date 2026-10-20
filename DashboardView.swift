@@ -57,25 +57,74 @@ struct DashboardView: View {
     }
     
     var body: some View {
+        if #available(iOS 18.0, *) {
+            nativeTabView
+        } else {
+            legacyTabView
+        }
+    }
+    
+    // MARK: - iOS 18+ Native TabView with Liquid Glass
+    @available(iOS 18.0, *)
+    private var nativeTabView: some View {
+        TabView(selection: $selectedTab) {
+            Tab("Главная", systemImage: "house.fill", value: 0) {
+                homeView
+            }
+            Tab("История", systemImage: "clock.fill", value: 1) {
+                historyView
+            }
+            Tab("Настройки", systemImage: "gearshape.fill", value: 2) {
+                SettingsView(currentUser: $currentUser, onLogout: onLock, isEmbedded: true)
+            }
+        }
+        .tabBarMinimizeBehavior(.onScrollDown)
+        .sheet(isPresented: $showTransferSheet) {
+            if let user = currentUser {
+                TransferView(currentUser: user, onTransferCompleted: { newBal in
+                    currentUser?.balance = newBal
+                    loadTransactions()
+                })
+            }
+        }
+        .sheet(isPresented: $showAtmSheet) {
+            if let user = currentUser {
+                BluetoothAtmView(currentUser: user)
+            }
+        }
+        .fullScreenCover(item: $selectedStatusForViewer) { initialStatus in
+            StoryViewer(
+                initialStatus: initialStatus,
+                statuses: sortedStatuses,
+                onStatusViewed: { viewedId in markStatusAsViewed(viewedId) },
+                onDismiss: { selectedStatusForViewer = nil }
+            )
+        }
+        .alert("Скоро будет доступно", isPresented: $showBleUpcomingAlert) {
+            Button("Понятно", role: .cancel) { }
+        } message: {
+            Text("Бесконтактный вход по Bluetooth скоро появится в приложении банка RoPay.")
+        }
+        .onAppear(perform: onViewAppear)
+        .onDisappear { APIService.shared.stopTransactionNotifications() }
+    }
+    
+    // MARK: - iOS 16/17 Fallback TabView
+    private var legacyTabView: some View {
         ZStack(alignment: .bottom) {
             BankTheme.bgDark.ignoresSafeArea()
             
-            // Tab content
             Group {
                 switch selectedTab {
-                case 0:
-                    homeView
-                case 1:
-                    historyView
-                case 2:
-                    SettingsView(currentUser: $currentUser, onLogout: onLock, isEmbedded: true)
-                default:
-                    homeView
+                case 0: homeView
+                case 1: historyView
+                case 2: SettingsView(currentUser: $currentUser, onLogout: onLock, isEmbedded: true)
+                default: homeView
                 }
             }
             
-            // Bottom Glass Navigation Bar
-            CustomTabBar(selectedTab: $selectedTab)
+            // Fallback: кастомный таб-бар с тёмным фоном
+            LegacyTabBar(selectedTab: $selectedTab)
         }
         .sheet(isPresented: $showTransferSheet) {
             if let user = currentUser {
@@ -94,12 +143,8 @@ struct DashboardView: View {
             StoryViewer(
                 initialStatus: initialStatus,
                 statuses: sortedStatuses,
-                onStatusViewed: { viewedId in
-                    markStatusAsViewed(viewedId)
-                },
-                onDismiss: {
-                    selectedStatusForViewer = nil
-                }
+                onStatusViewed: { viewedId in markStatusAsViewed(viewedId) },
+                onDismiss: { selectedStatusForViewer = nil }
             )
         }
         .alert("Скоро будет доступно", isPresented: $showBleUpcomingAlert) {
@@ -107,18 +152,18 @@ struct DashboardView: View {
         } message: {
             Text("Бесконтактный вход по Bluetooth скоро появится в приложении банка RoPay.")
         }
-        .onAppear {
-            NotificationManager.shared.requestPermission()
-            if let user = currentUser {
-                APIService.shared.startTransactionNotifications(userId: user.id)
-            }
-            btManager.startScanning()
-            loadTransactions()
-            loadStatuses()
+        .onAppear(perform: onViewAppear)
+        .onDisappear { APIService.shared.stopTransactionNotifications() }
+    }
+    
+    private func onViewAppear() {
+        NotificationManager.shared.requestPermission()
+        if let user = currentUser {
+            APIService.shared.startTransactionNotifications(userId: user.id)
         }
-        .onDisappear {
-            APIService.shared.stopTransactionNotifications()
-        }
+        btManager.startScanning()
+        loadTransactions()
+        loadStatuses()
     }
     
     // MARK: - Ambient Light Background
@@ -346,7 +391,7 @@ struct DashboardView: View {
                         }
                         .padding(.top, 10)
                     }
-                    .padding(.bottom, 95)
+                    .padding(.bottom, 110) // legacyTabView padding compensation
                 }
                 .refreshable {
                     refreshData()
@@ -406,7 +451,7 @@ struct DashboardView: View {
                             .padding(.horizontal, 20)
                         }
                     }
-                    .padding(.bottom, 95)
+                    .padding(.bottom, 110) // legacyTabView padding compensation
                 }
                 .refreshable {
                     loadTransactions()
@@ -548,40 +593,21 @@ struct GlassTopBar: View {
     }
 }
 
-// MARK: - Custom Tab Bar (Ricky Aguilar Pattern)
-struct CustomTabBar: View {
+// MARK: - Legacy Tab Bar (iOS 16/17 fallback)
+struct LegacyTabBar: View {
     @Binding var selectedTab: Int
     
     var body: some View {
-        #if os(iOS)
-        if #available(iOS 26.0, *) {
-            // Нативный вариант с эффектом Liquid Glass для поддерживаемых версий
-            HStack {
-                TabBarButton(icon: "house.fill", title: "Главная", tag: 0, selection: $selectedTab)
-                TabBarButton(icon: "clock.fill", title: "История", tag: 1, selection: $selectedTab)
-                TabBarButton(icon: "gearshape.fill", title: "Настройки", tag: 2, selection: $selectedTab)
-            }
-            .padding(8)
-            .background(.ultraThinMaterial)
-            .glassEffect(cornerRadius: 32) // Нативный системный модификатор стекла
-            .tabBarMinimizeBehavior(.onScrollDown) // Автоматическое поведение при скролле, как в видео
-            .cornerRadius(32)
-            .padding(.horizontal, 16)
-            .padding(.bottom, 6)
-        } else {
-            // Фоллбэк-вариант для более старых версий iOS
-            HStack {
-                TabBarButton(icon: "house.fill", title: "Главная", tag: 0, selection: $selectedTab)
-                TabBarButton(icon: "clock.fill", title: "История", tag: 1, selection: $selectedTab)
-                TabBarButton(icon: "gearshape.fill", title: "Настройки", tag: 2, selection: $selectedTab)
-            }
-            .padding(8)
-            .background(Color.black.opacity(0.6))
-            .cornerRadius(32)
-            .padding(.horizontal, 16)
-            .padding(.bottom, 6)
+        HStack {
+            TabBarButton(icon: "house.fill", title: "Главная", tag: 0, selection: $selectedTab)
+            TabBarButton(icon: "clock.fill", title: "История", tag: 1, selection: $selectedTab)
+            TabBarButton(icon: "gearshape.fill", title: "Настройки", tag: 2, selection: $selectedTab)
         }
-        #endif
+        .padding(8)
+        .background(Color.black.opacity(0.6))
+        .cornerRadius(32)
+        .padding(.horizontal, 16)
+        .padding(.bottom, 6)
     }
 }
 
