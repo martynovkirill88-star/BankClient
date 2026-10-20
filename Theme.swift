@@ -13,6 +13,9 @@ struct BankTheme {
     static let border = Color(hex: "#30363D")
     static let textMuted = Color(hex: "#8B949E")
     static let danger = Color(hex: "#FF453A")
+    static let coral = Color(hex: "#FF6B6B")
+    static let gold = Color(hex: "#F59E0B")
+    static let cyan = Color(hex: "#38BDF8")
     static let textWhite = Color.white
 
     // Gradients

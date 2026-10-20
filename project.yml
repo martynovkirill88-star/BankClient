@@ -26,6 +26,9 @@ targets:
       - path: SupportChatView.swift
       - path: RoPayInAppBrowserView.swift
       - path: StoryViews.swift
+      - path: TapPaymentManager.swift
+      - path: MerchantTerminalView.swift
+      - path: BuyerTapPayView.swift
       - path: LottieLoaderView.swift
       - path: loader.html
       - path: Assets.xcassets

@@ -10,6 +10,12 @@ struct User: Codable, Identifiable, Equatable {
     var photo_filename: String?
     var has_face: Bool?
     var created_at: String?
+    var is_business: Int?
+    var business_name: String?
+    
+    var isBusinessAccount: Bool {
+        return (is_business ?? 0) == 1
+    }
     
     var fullName: String {
         let sur = surname ?? ""
@@ -23,6 +29,32 @@ struct User: Codable, Identifiable, Equatable {
         let formatted = formatter.string(from: NSNumber(value: balance)) ?? "\(Int(balance))"
         return "\(formatted) ₽"
     }
+}
+
+// MARK: - POS Terminal Session Model (RoPay Tap / NameDrop Pay)
+struct TerminalSession: Codable, Identifiable {
+    let id: String
+    let merchant_id: Int
+    let merchant_name: String
+    let amount: Double
+    let description: String?
+    let status: String // "waiting", "paid", "cancelled"
+    let buyer_id: Int?
+    let buyer_name: String?
+    let created_at: String?
+    let paid_at: String?
+}
+
+struct TerminalSessionResponse: Codable {
+    let success: Bool
+    let message: String?
+    let session: TerminalSession?
+}
+
+struct TerminalPayResponse: Codable {
+    let success: Bool
+    let message: String?
+    let session: TerminalSession?
 }
 
 // MARK: - Transaction Model

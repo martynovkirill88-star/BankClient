@@ -68,7 +68,13 @@
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>Приложение использует Bluetooth для бесконтактного обнаружения банкомата и быстрого входа.</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>
-	<string>Приложение использует Bluetooth для связи с банкоматом.</string>
+	<string>Приложение использует Bluetooth для связи с банкоматом и приёма оплаты телефоном.</string>
+	<key>NFCReaderUsageDescription</key>
+	<string>Используется для бесконтактной оплаты RoPay прикладыванием iPhone к терминалу.</string>
+	<key>com.apple.developer.nfc.readersession.formats</key>
+	<array>
+		<string>NDEF</string>
+	</array>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Используется для быстрого и безопасного входа в банк по Face ID.</string>
 	<key>NSCameraUsageDescription</key>

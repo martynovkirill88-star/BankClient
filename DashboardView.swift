@@ -10,6 +10,8 @@ struct DashboardView: View {
     @State private var isLoadingTransactions: Bool = false
     @State private var showTransferSheet: Bool = false
     @State private var showAtmSheet: Bool = false
+    @State private var showMerchantTerminalSheet: Bool = false
+    @State private var showBuyerTapPaySheet: Bool = false
     @State private var isBalanceHidden: Bool = false
     @State private var showBleUpcomingAlert: Bool = false
     
@@ -87,6 +89,22 @@ struct DashboardView: View {
             .sheet(isPresented: $showAtmSheet) {
                 if let user = currentUser {
                     BluetoothAtmView(currentUser: user)
+                }
+            }
+            .sheet(isPresented: $showMerchantTerminalSheet) {
+                if let user = currentUser {
+                    MerchantTerminalView(merchant: user, onPaymentReceived: { earned in
+                        currentUser?.balance += earned
+                        loadTransactions()
+                    })
+                }
+            }
+            .sheet(isPresented: $showBuyerTapPaySheet) {
+                if let user = currentUser {
+                    BuyerTapPayView(buyer: user, onPaymentCompleted: { newBal in
+                        currentUser?.balance = newBal
+                        loadTransactions()
+                    })
                 }
             }
             .sheet(item: $selectedServiceForBrowser) { srv in
@@ -180,6 +198,22 @@ struct DashboardView: View {
         .sheet(isPresented: $showAtmSheet) {
             if let user = currentUser {
                 BluetoothAtmView(currentUser: user)
+            }
+        }
+        .sheet(isPresented: $showMerchantTerminalSheet) {
+            if let user = currentUser {
+                MerchantTerminalView(merchant: user, onPaymentReceived: { earned in
+                    currentUser?.balance += earned
+                    loadTransactions()
+                })
+            }
+        }
+        .sheet(isPresented: $showBuyerTapPaySheet) {
+            if let user = currentUser {
+                BuyerTapPayView(buyer: user, onPaymentCompleted: { newBal in
+                    currentUser?.balance = newBal
+                    loadTransactions()
+                })
             }
         }
         .sheet(item: $selectedServiceForBrowser) { srv in
@@ -321,7 +355,7 @@ struct DashboardView: View {
                                 .font(.system(size: 36, weight: .black))
                                 .foregroundColor(.white)
                             
-                            // ── Action Buttons: Перевести / Банкомат ──────
+                            // ── Action Buttons: Перевести / Оплата касанием ──────
                             HStack(spacing: 12) {
                                 if #available(iOS 26.0, *) {
                                     Button(action: { showTransferSheet = true }) {
@@ -336,13 +370,13 @@ struct DashboardView: View {
                                     }
                                     .buttonStyle(.glass)
                                     
-                                    Button(action: { showBleUpcomingAlert = true }) {
+                                    Button(action: { showBuyerTapPaySheet = true }) {
                                         HStack {
-                                            Image(systemName: "bolt.fill")
-                                            Text("В банкомат")
+                                            Image(systemName: "wave.3.forward.circle.fill")
+                                            Text("Оплата")
                                                 .font(.system(size: 15, weight: .bold))
                                         }
-                                        .foregroundColor(BankTheme.purple)
+                                        .foregroundColor(BankTheme.mint)
                                         .frame(maxWidth: .infinity)
                                         .padding(.vertical, 14)
                                     }
@@ -359,16 +393,16 @@ struct DashboardView: View {
                                         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
                                         .foregroundColor(.white)
                                     }
-                                    Button(action: { showBleUpcomingAlert = true }) {
+                                    Button(action: { showBuyerTapPaySheet = true }) {
                                         HStack {
-                                            Image(systemName: "bolt.fill")
-                                            Text("В банкомат")
+                                            Image(systemName: "wave.3.forward.circle.fill")
+                                            Text("Оплата")
                                                 .font(.system(size: 15, weight: .bold))
                                         }
                                         .frame(maxWidth: .infinity)
                                         .padding(.vertical, 14)
                                         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-                                        .foregroundColor(BankTheme.purple)
+                                        .foregroundColor(BankTheme.mint)
                                     }
                                 }
                             }
@@ -389,6 +423,47 @@ struct DashboardView: View {
                                 BtBannerContent(btManager: btManager)
                             }
                             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
+                            .padding(.horizontal, 20)
+                        }
+                        
+                        // ── Business Profile: POS Terminal Button ─────────────
+                        if currentUser?.isBusinessAccount == true {
+                            Button(action: { showMerchantTerminalSheet = true }) {
+                                HStack(spacing: 14) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(BankTheme.gold.opacity(0.22))
+                                            .frame(width: 44, height: 44)
+                                        Image(systemName: "wave.3.forward.circle.fill")
+                                            .font(.system(size: 22))
+                                            .foregroundColor(BankTheme.gold)
+                                    }
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        HStack(spacing: 6) {
+                                            Text("Терминал приёма оплаты")
+                                                .font(.system(size: 14, weight: .bold))
+                                                .foregroundColor(.white)
+                                            Text("БИЗНЕС")
+                                                .font(.system(size: 9, weight: .black))
+                                                .foregroundColor(BankTheme.gold)
+                                                .padding(.horizontal, 6)
+                                                .padding(.vertical, 2)
+                                                .background(BankTheme.gold.opacity(0.18))
+                                                .cornerRadius(6)
+                                        }
+                                        Text(currentUser?.business_name?.isEmpty == false ? currentUser!.business_name! : "Приём оплат касанием (RoPay Tap)")
+                                            .font(.system(size: 12))
+                                            .foregroundColor(BankTheme.textMuted)
+                                            .lineLimit(1)
+                                    }
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .foregroundColor(BankTheme.textMuted)
+                                }
+                                .padding(14)
+                            }
+                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
+                            .overlay(RoundedRectangle(cornerRadius: 18).stroke(BankTheme.gold.opacity(0.5), lineWidth: 1.5))
                             .padding(.horizontal, 20)
                         }
                         

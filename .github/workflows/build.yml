@@ -68,9 +68,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/heads/main')
         with:
-          tag_name: v1.0.23
-          name: "RoPay iOS v1.0.23 - Status Video Sound Toggle & Native In-App Browser Zoom Lock"
-          body: "RoPay v1.0.23: Автоматическая кнопка включения звука для видео-историй; фикс воспроизведения звука видео в беззвучном режиме; полная блокировка масштабирования и дабл-тапа во встроенном браузере (нативный UI); мгновенный офлайн-вход по ПИН-коду и обновлённая плавная анимация приветствия."
+          tag_name: v1.0.24
+          name: "RoPay iOS v1.0.24 - RoPay Tap Phone-to-Phone Contactless Payments & POS Terminal"
+          body: "RoPay v1.0.24: Бесконтактная оплата телефон к телефону (RoPay Tap) в стиле Apple NameDrop / Tap to Pay; Штатное системное окно Apple NFC («Приложите iPhone к терминалу»); Терминал приёма оплаты для бизнес-профилей; Определение физического касания телефонов с виброоткликом и звуком Haptic; Face ID подтверждение списания."
           files: build/ClientBank.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

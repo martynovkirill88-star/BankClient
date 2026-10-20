@@ -133,6 +133,85 @@ class APIService: ObservableObject {
         return newBal
     }
     
+    // MARK: - POS Terminal & Tap-to-Pay (NameDrop Pay)
+    func createTerminalSession(merchantId: Int, amount: Double, description: String = "") async throws -> TerminalSession {
+        guard let url = URL(string: "\(cleanBaseURL)/api/terminal/create") else {
+            throw URLError(.badURL)
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = [
+            "merchant_id": merchantId,
+            "amount": amount,
+            "description": description
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
+        let res = try JSONDecoder().decode(TerminalSessionResponse.self, from: data)
+        guard res.success, let s = res.session else {
+            throw NSError(domain: "APIService", code: 400, userInfo: [NSLocalizedDescriptionKey: res.message ?? "Ошибка создания терминала"])
+        }
+        return s
+    }
+    
+    func getTerminalSession(sessionId: String) async throws -> TerminalSession {
+        guard let url = URL(string: "\(cleanBaseURL)/api/terminal/session/\(sessionId)") else {
+            throw URLError(.badURL)
+        }
+        let (data, response) = try await URLSession.shared.data(from: url)
+        guard let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
+        let res = try JSONDecoder().decode(TerminalSessionResponse.self, from: data)
+        guard res.success, let s = res.session else {
+            throw NSError(domain: "APIService", code: 404, userInfo: [NSLocalizedDescriptionKey: res.message ?? "Сессия не найдена"])
+        }
+        return s
+    }
+    
+    func getLatestActiveTerminal() async throws -> TerminalSession {
+        guard let url = URL(string: "\(cleanBaseURL)/api/terminal/latest_active") else {
+            throw URLError(.badURL)
+        }
+        let (data, response) = try await URLSession.shared.data(from: url)
+        guard let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
+        let res = try JSONDecoder().decode(TerminalSessionResponse.self, from: data)
+        guard res.success, let s = res.session else {
+            throw NSError(domain: "APIService", code: 404, userInfo: [NSLocalizedDescriptionKey: res.message ?? "Нет активных терминалов"])
+        }
+        return s
+    }
+    
+    func payTerminalSession(sessionId: String, buyerId: Int) async throws -> (TerminalSession, Double) {
+        guard let url = URL(string: "\(cleanBaseURL)/api/terminal/pay") else {
+            throw URLError(.badURL)
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = [
+            "session_id": sessionId,
+            "buyer_id": buyerId
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
+        let res = try JSONDecoder().decode(TerminalPayResponse.self, from: data)
+        guard res.success, let s = res.session else {
+            throw NSError(domain: "APIService", code: 400, userInfo: [NSLocalizedDescriptionKey: res.message ?? "Ошибка списания средств"])
+        }
+        let updatedProfile = try await fetchProfile(userId: buyerId)
+        return (s, updatedProfile.balance)
+    }
+    
     // MARK: - Fetch Transactions
     func fetchTransactions(userId: Int) async throws -> [BankTransaction] {
         guard let url = URL(string: "\(cleanBaseURL)/api/client/transactions/\(userId)") else {
