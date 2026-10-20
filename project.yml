@@ -23,6 +23,8 @@ targets:
       - path: LiquidGlassAmountView.swift
       - path: BluetoothAtmView.swift
       - path: SettingsView.swift
+      - path: SupportChatView.swift
+      - path: SupportCallView.swift
       - path: StoryViews.swift
       - path: LottieLoaderView.swift
       - path: loader.html
@@ -43,5 +45,6 @@ targets:
       INFOPLIST_KEY_NSFaceIDUsageDescription: "Используется для быстрого и безопасного входа в банк по Face ID."
       INFOPLIST_KEY_NSCameraUsageDescription: "Используется для биометрической верификации лица и Face ID."
       INFOPLIST_KEY_NSContactsUsageDescription: "Приложение использует контакты для быстрого перевода средств клиентам банка RoPay."
+      INFOPLIST_KEY_NSMicrophoneUsageDescription: "Используется для голосового общения со службой поддержки и ботом RoPay."
 
 

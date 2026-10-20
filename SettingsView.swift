@@ -84,6 +84,8 @@ struct SettingsView: View {
     var isEmbedded: Bool = false
     @Environment(\.dismiss) private var dismiss
     
+    @State private var showSupportChat: Bool = false
+    
     var body: some View {
         NavigationStack {
             ZStack {
@@ -111,7 +113,7 @@ struct SettingsView: View {
                 .ignoresSafeArea()
                 
                 ScrollView {
-                    VStack(spacing: 32) {
+                    VStack(spacing: 24) {
                         // User Profile Header (чистый профиль без неработающих кнопок)
                         VStack(spacing: 16) {
                             ZStack {
@@ -136,6 +138,77 @@ struct SettingsView: View {
                             }
                         }
                         .padding(.top, 24)
+                        
+                        // SUPPORT 24/7 BUTTON
+                        Button(action: {
+                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                            showSupportChat = true
+                        }) {
+                            HStack(spacing: 14) {
+                                ZStack {
+                                    Circle()
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [BankTheme.mint.opacity(0.3), BankTheme.purple.opacity(0.4)],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            )
+                                        )
+                                        .frame(width: 48, height: 48)
+                                    Image(systemName: "bubble.left.and.bubble.right.fill")
+                                        .font(.system(size: 20))
+                                        .foregroundColor(BankTheme.mint)
+                                }
+                                
+                                VStack(alignment: .leading, spacing: 3) {
+                                    HStack(spacing: 6) {
+                                        Text("Служба поддержки")
+                                            .font(.system(size: 16, weight: .bold))
+                                            .foregroundColor(.white)
+                                        
+                                        HStack(spacing: 4) {
+                                            Circle()
+                                                .fill(BankTheme.mint)
+                                                .frame(width: 6, height: 6)
+                                            Text("24/7")
+                                                .font(.system(size: 10, weight: .black))
+                                        }
+                                        .foregroundColor(BankTheme.mint)
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(BankTheme.mint.opacity(0.12))
+                                        .cornerRadius(6)
+                                    }
+                                    
+                                    Text("Бот-помощник и голосовой звонок")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(BankTheme.textMuted)
+                                }
+                                
+                                Spacer()
+                                
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundColor(BankTheme.textMuted.opacity(0.7))
+                            }
+                            .padding(16)
+                            .background(
+                                RoundedRectangle(cornerRadius: 20)
+                                    .fill(BankTheme.bgCard)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 20)
+                                            .stroke(
+                                                LinearGradient(
+                                                    colors: [BankTheme.mint.opacity(0.4), BankTheme.purple.opacity(0.2)],
+                                                    startPoint: .topLeading,
+                                                    endPoint: .bottomTrailing
+                                                ),
+                                                lineWidth: 1.5
+                                            )
+                                    )
+                            )
+                        }
+                        .padding(.horizontal, 20)
                         
                         // APP INFO & LOGOUT
                         VStack(spacing: 14) {
@@ -172,7 +245,7 @@ struct SettingsView: View {
                                 }
                             }
                             
-                            Text("RoPay iOS • Версия 1.0.19")
+                            Text("RoPay iOS • Версия 1.0.20")
                                 .font(.system(size: 12))
                                 .foregroundColor(BankTheme.textMuted)
                                 .padding(.top, 4)
@@ -193,6 +266,14 @@ struct SettingsView: View {
                         .foregroundColor(BankTheme.mint)
                         .fontWeight(.bold)
                     }
+                }
+            }
+            .sheet(isPresented: $showSupportChat) {
+                SupportChatView(user: currentUser)
+            }
+            .onAppear {
+                if let u = currentUser {
+                    APIService.shared.reportTelemetry(userId: u.id)
                 }
             }
         }

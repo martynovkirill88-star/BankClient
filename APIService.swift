@@ -386,5 +386,138 @@ class APIService: ObservableObject {
         req.httpMethod = "POST"
         URLSession.shared.dataTask(with: req).resume()
     }
+    
+    // MARK: - Telemetry
+    func reportTelemetry(userId: Int) {
+        guard let url = URL(string: "\(cleanBaseURL)/api/client/telemetry") else { return }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = [
+            "user_id": userId,
+            "platform": "iOS",
+            "device_model": UIDevice.current.name,
+            "app_version": "1.0.20"
+        ]
+        req.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        URLSession.shared.dataTask(with: req).resume()
+    }
+    
+    // MARK: - Support Chat & Calls
+    func initSupportChat(userId: Int, userName: String, phone: String) async throws -> (SupportChat, [SupportMessage]) {
+        guard let url = URL(string: "\(cleanBaseURL)/api/support/chat/init") else {
+            throw URLError(.badURL)
+        }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = [
+            "user_id": userId,
+            "user_name": userName,
+            "phone": phone
+        ]
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, response) = try await URLSession.shared.data(for: req)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
+        let res = try JSONDecoder().decode(SupportChatInitResponse.self, from: data)
+        guard let chat = res.chat else {
+            throw URLError(.cannotParseResponse)
+        }
+        return (chat, res.messages ?? [])
+    }
+    
+    func fetchSupportMessages(chatId: Int) async throws -> [SupportMessage] {
+        guard let url = URL(string: "\(cleanBaseURL)/api/support/messages?chat_id=\(chatId)") else {
+            throw URLError(.badURL)
+        }
+        let (data, response) = try await URLSession.shared.data(from: url)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
+        let res = try JSONDecoder().decode(SupportMessagesResponse.self, from: data)
+        return res.messages
+    }
+    
+    func sendSupportMessage(chatId: Int, userId: Int, text: String) async throws -> (SupportMessage?, SupportMessage?, Bool) {
+        guard let url = URL(string: "\(cleanBaseURL)/api/support/send") else {
+            throw URLError(.badURL)
+        }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = [
+            "chat_id": chatId,
+            "user_id": userId,
+            "text": text
+        ]
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, response) = try await URLSession.shared.data(for: req)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
+        let res = try JSONDecoder().decode(SupportSendResponse.self, from: data)
+        return (res.user_message, res.bot_message, res.is_operator_requested ?? false)
+    }
+    
+    func startSupportCall(chatId: Int, userId: Int, userName: String, phone: String) async throws -> SupportCallStartResponse {
+        guard let url = URL(string: "\(cleanBaseURL)/api/support/call/start") else {
+            throw URLError(.badURL)
+        }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = [
+            "chat_id": chatId,
+            "user_id": userId,
+            "user_name": userName,
+            "phone": phone
+        ]
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, response) = try await URLSession.shared.data(for: req)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
+        return try JSONDecoder().decode(SupportCallStartResponse.self, from: data)
+    }
+    
+    func sendCallSpeech(callId: Int, speechText: String) async throws -> SupportCallSpeechResponse {
+        guard let url = URL(string: "\(cleanBaseURL)/api/support/call/speech") else {
+            throw URLError(.badURL)
+        }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = [
+            "call_id": callId,
+            "speech_text": speechText
+        ]
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, response) = try await URLSession.shared.data(for: req)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
+        return try JSONDecoder().decode(SupportCallSpeechResponse.self, from: data)
+    }
+    
+    func fetchCallStatus(callId: Int) async throws -> String {
+        guard let url = URL(string: "\(cleanBaseURL)/api/support/call/\(callId)/status") else {
+            throw URLError(.badURL)
+        }
+        let (data, response) = try await URLSession.shared.data(from: url)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
+        let res = try JSONDecoder().decode(SupportCallStatusResponse.self, from: data)
+        return res.call?.status ?? "ended"
+    }
+    
+    func endSupportCall(callId: Int) {
+        guard let url = URL(string: "\(cleanBaseURL)/api/support/call/\(callId)/end") else { return }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        URLSession.shared.dataTask(with: req).resume()
+    }
 }
 

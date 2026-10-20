@@ -164,3 +164,80 @@ struct ApplicationResponse: Codable {
     let application_id: Int?
 }
 
+// MARK: - Support Chat & Voice Call Models
+struct SupportChat: Codable, Identifiable {
+    let id: Int
+    let user_id: Int
+    let user_name: String
+    let phone: String?
+    let status: String
+    let unread_admin: Int?
+    let unread_user: Int?
+    let last_message: String?
+    let created_at: String?
+    let updated_at: String?
+}
+
+struct SupportMessage: Codable, Identifiable, Equatable {
+    let id: Int
+    let chat_id: Int
+    let sender: String // "user", "bot", "operator"
+    let sender_name: String?
+    let text: String
+    let audio_url: String?
+    let created_at: String?
+    
+    var isUser: Bool { sender == "user" }
+    var isOperator: Bool { sender == "operator" }
+    var isBot: Bool { sender == "bot" }
+}
+
+struct SupportChatInitResponse: Codable {
+    let success: Bool
+    let chat: SupportChat?
+    let messages: [SupportMessage]?
+}
+
+struct SupportMessagesResponse: Codable {
+    let success: Bool
+    let messages: [SupportMessage]
+}
+
+struct SupportSendResponse: Codable {
+    let success: Bool
+    let user_message: SupportMessage?
+    let bot_message: SupportMessage?
+    let is_operator_requested: Bool?
+}
+
+struct SupportCallStartResponse: Codable {
+    let success: Bool
+    let call_id: Int
+    let status: String
+    let bot_message: String?
+    let audio_url: String?
+}
+
+struct SupportCallSpeechResponse: Codable {
+    let success: Bool
+    let status: String
+    let bot_message: String?
+    let audio_url: String?
+    let play_hold_music: Bool?
+}
+
+struct SupportCallStatusResponse: Codable {
+    let success: Bool
+    let call: SupportCallInfo?
+}
+
+struct SupportCallInfo: Codable {
+    let id: Int
+    let chat_id: Int
+    let user_id: Int
+    let status: String
+    let bot_message: String?
+    let audio_url: String?
+}
+
+

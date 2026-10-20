@@ -75,6 +75,8 @@
 	<string>Используется для биометрической верификации лица.</string>
 	<key>NSContactsUsageDescription</key>
 	<string>Приложение использует контакты для быстрого перевода средств клиентам банка RoPay.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Используется для голосового общения со службой поддержки и ботом RoPay.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
