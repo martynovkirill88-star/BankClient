@@ -25,6 +25,7 @@ targets:
       - path: SettingsView.swift
       - path: SupportChatView.swift
       - path: RoPayInAppBrowserView.swift
+      - path: NotificationsSheetView.swift
       - path: StoryViews.swift
       - path: TapPaymentManager.swift
       - path: MerchantTerminalView.swift

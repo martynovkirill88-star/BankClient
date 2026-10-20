@@ -196,7 +196,20 @@ struct InAppWebViewRepresentable: UIViewRepresentable {
 struct RoPayInAppBrowserView: View {
     @Environment(\.dismiss) private var dismiss
     let service: BankService
+    let user: User?
     let userId: Int?
+    
+    init(service: BankService, user: User?) {
+        self.service = service
+        self.user = user
+        self.userId = user?.id
+    }
+    
+    init(service: BankService, userId: Int?) {
+        self.service = service
+        self.user = nil
+        self.userId = userId
+    }
     
     @State private var estimatedProgress: Double = 0.0
     @State private var canGoBack: Bool = false
@@ -209,11 +222,32 @@ struct RoPayInAppBrowserView: View {
             urlString = "https://\(urlString)"
         }
         
-        // Append secure in-app parameters
+        // Append secure in-app parameters with user identity
         let delimiter = urlString.contains("?") ? "&" : "?"
-        let uidParam = userId != nil ? "&uid=\(userId!)" : ""
-        let finalUrlString = "\(urlString)\(delimiter)ropay_inapp=1\(uidParam)"
+        var params = ["ropay_inapp=1"]
         
+        if let u = user {
+            params.append("uid=\(u.id)")
+            params.append("user_id=\(u.id)")
+            if let encName = u.name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
+                params.append("name=\(encName)")
+            }
+            if let sur = u.surname, !sur.isEmpty, let encSur = sur.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
+                params.append("surname=\(encSur)")
+            }
+            if let ph = u.phone, !ph.isEmpty, let encPhone = ph.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
+                params.append("phone=\(encPhone)")
+            }
+            params.append("is_business=\(u.is_business ?? 0)")
+            if let bName = u.business_name, !bName.isEmpty, let encB = bName.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
+                params.append("business_name=\(encB)")
+            }
+        } else if let uid = userId {
+            params.append("uid=\(uid)")
+            params.append("user_id=\(uid)")
+        }
+        
+        let finalUrlString = "\(urlString)\(delimiter)\(params.joined(separator: "&"))"
         return URL(string: finalUrlString) ?? URL(string: "https://app.ropay.site")!
     }
     

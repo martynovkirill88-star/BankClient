@@ -327,5 +327,40 @@ struct ServicesResponse: Codable {
     let services: [BankService]
 }
 
+// MARK: - RoPay Notifications
+struct RoPayNotification: Codable, Identifiable, Equatable {
+    let id: Int
+    let user_id: Int
+    let title: String
+    let message: String
+    let type: String
+    let is_read: Int
+    let created_at: String?
+    
+    var isRead: Bool {
+        return is_read == 1
+    }
+    
+    var iconName: String {
+        switch type {
+        case "business_approved":
+            return "checkmark.seal.fill"
+        case "business_rejected":
+            return "xmark.seal.fill"
+        case "broadcast":
+            return "megaphone.fill"
+        default:
+            return "bell.fill"
+        }
+    }
+}
+
+struct NotificationsResponse: Codable {
+    let success: Bool
+    let notifications: [RoPayNotification]?
+    let unread_count: Int?
+}
+
+
 
 

@@ -14,6 +14,8 @@ struct DashboardView: View {
     @State private var showBuyerTapPaySheet: Bool = false
     @State private var isBalanceHidden: Bool = false
     @State private var showBleUpcomingAlert: Bool = false
+    @State private var showNotificationsSheet: Bool = false
+    @State private var unreadNotificationsCount: Int = 0
     
     // Dynamic Services / Tele2 Mini-Apps
     @State private var dynamicServices: [BankService] = []
@@ -70,6 +72,20 @@ struct DashboardView: View {
         }
     }
     
+    func loadNotificationsCount() {
+        guard let uid = currentUser?.id else { return }
+        Task {
+            do {
+                let res = try await APIService.shared.fetchNotifications(userId: uid)
+                await MainActor.run {
+                    self.unreadNotificationsCount = res.unreadCount
+                }
+            } catch {
+                print("Error fetching notifications count: \(error)")
+            }
+        }
+    }
+    
     var hasFaceBiometrics: Bool {
         guard let user = currentUser else { return false }
         return (user.has_face == true) || (user.photo_filename != nil && !user.photo_filename!.isEmpty)
@@ -108,7 +124,13 @@ struct DashboardView: View {
                 }
             }
             .sheet(item: $selectedServiceForBrowser) { srv in
-                RoPayInAppBrowserView(service: srv, userId: currentUser?.id)
+                RoPayInAppBrowserView(service: srv, user: currentUser)
+            }
+            .sheet(isPresented: $showNotificationsSheet) {
+                NotificationsSheetView(currentUser: currentUser)
+                    .onDisappear {
+                        loadNotificationsCount()
+                    }
             }
             .fullScreenCover(item: $selectedStatusForViewer) { initialStatus in
                 StoryViewer(
@@ -217,7 +239,13 @@ struct DashboardView: View {
             }
         }
         .sheet(item: $selectedServiceForBrowser) { srv in
-            RoPayInAppBrowserView(service: srv, userId: currentUser?.id)
+            RoPayInAppBrowserView(service: srv, user: currentUser)
+        }
+        .sheet(isPresented: $showNotificationsSheet) {
+            NotificationsSheetView(currentUser: currentUser)
+                .onDisappear {
+                    loadNotificationsCount()
+                }
         }
         .fullScreenCover(item: $selectedStatusForViewer) { initialStatus in
             StoryViewer(
@@ -245,6 +273,7 @@ struct DashboardView: View {
         loadTransactions()
         loadStatuses()
         loadDynamicServices()
+        loadNotificationsCount()
     }
     
     // MARK: - Ambient Light Background
@@ -284,7 +313,11 @@ struct DashboardView: View {
                         // ── Top Bar (GlassTopBar by Ricky Aguilar Pattern) ──
                         GlassTopBar(
                             userInitial: userInitial,
-                            userName: currentUser?.fullName ?? "Клиент"
+                            userName: currentUser?.fullName ?? "Клиент",
+                            unreadCount: unreadNotificationsCount,
+                            onNotificationsTap: {
+                                showNotificationsSheet = true
+                            }
                         )
                         
                         // ── Stories / Statuses Bar ────────────────────────
@@ -615,6 +648,8 @@ struct DashboardView: View {
 struct GlassTopBar: View {
     let userInitial: String
     let userName: String
+    var unreadCount: Int = 0
+    var onNotificationsTap: () -> Void = {}
     
     var body: some View {
         #if os(iOS)
@@ -659,6 +694,53 @@ struct GlassTopBar: View {
             }
             
             Spacer()
+            
+            // Circular Notification Button (like transfer button, but round with icon & badge)
+            Button(action: {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                onNotificationsTap()
+            }) {
+                ZStack(alignment: .topTrailing) {
+                    ZStack {
+                        #if os(iOS)
+                        if #available(iOS 26.0, *) {
+                            Circle()
+                                .fill(.ultraThinMaterial)
+                                .frame(width: 44, height: 44)
+                        } else {
+                            Circle()
+                                .fill(BankTheme.bgCardSecondary)
+                                .frame(width: 44, height: 44)
+                        }
+                        #else
+                        Circle()
+                            .fill(BankTheme.bgCardSecondary)
+                            .frame(width: 44, height: 44)
+                        #endif
+                        
+                        Image(systemName: unreadCount > 0 ? "bell.badge.fill" : "bell.fill")
+                            .font(.system(size: 19, weight: .semibold))
+                            .foregroundColor(unreadCount > 0 ? BankTheme.mint : .white)
+                    }
+                    .overlay(
+                        Circle()
+                            .stroke(unreadCount > 0 ? BankTheme.mint.opacity(0.4) : BankTheme.border, lineWidth: 1)
+                    )
+                    
+                    if unreadCount > 0 {
+                        ZStack {
+                            Circle()
+                                .fill(Color.red)
+                                .frame(width: 18, height: 18)
+                            Text("\(unreadCount > 99 ? "99+" : "\(unreadCount)")")
+                                .font(.system(size: 10, weight: .black))
+                                .foregroundColor(.white)
+                        }
+                        .offset(x: 3, y: -3)
+                    }
+                }
+            }
+            .buttonStyle(.plain)
         }
     }
     

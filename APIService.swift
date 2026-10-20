@@ -611,5 +611,31 @@ class APIService: ObservableObject {
         let res = try JSONDecoder().decode(ServicesResponse.self, from: data)
         return res.services
     }
+    
+    // MARK: - Notifications
+    func fetchNotifications(userId: Int) async throws -> (notifications: [RoPayNotification], unreadCount: Int) {
+        guard let url = URL(string: "\(cleanBaseURL)/api/client/notifications/\(userId)") else {
+            throw URLError(.badURL)
+        }
+        let (data, response) = try await URLSession.shared.data(from: url)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
+        let res = try JSONDecoder().decode(NotificationsResponse.self, from: data)
+        return (res.notifications ?? [], res.unread_count ?? 0)
+    }
+    
+    func markNotificationsRead(userId: Int, notificationId: Int? = nil) async {
+        guard let url = URL(string: "\(cleanBaseURL)/api/client/notifications/mark-read") else { return }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var body: [String: Any] = ["user_id": userId]
+        if let nid = notificationId {
+            body["notification_id"] = nid
+        }
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        _ = try? await URLSession.shared.data(for: request)
+    }
 }
 
