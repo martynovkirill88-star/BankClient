@@ -56,17 +56,52 @@ struct DashboardView: View {
         return (user.has_face == true) || (user.photo_filename != nil && !user.photo_filename!.isEmpty)
     }
     
+    // Общие модификаторы (шиты, алерты, onAppear) — применяются поверх любого TabView
+    private func withCommonModifiers<V: View>(_ view: V) -> some View {
+        view
+            .sheet(isPresented: $showTransferSheet) {
+                if let user = currentUser {
+                    TransferView(currentUser: user, onTransferCompleted: { newBal in
+                        currentUser?.balance = newBal
+                        loadTransactions()
+                    })
+                }
+            }
+            .sheet(isPresented: $showAtmSheet) {
+                if let user = currentUser {
+                    BluetoothAtmView(currentUser: user)
+                }
+            }
+            .fullScreenCover(item: $selectedStatusForViewer) { initialStatus in
+                StoryViewer(
+                    initialStatus: initialStatus,
+                    statuses: sortedStatuses,
+                    onStatusViewed: { viewedId in markStatusAsViewed(viewedId) },
+                    onDismiss: { selectedStatusForViewer = nil }
+                )
+            }
+            .alert("Скоро будет доступно", isPresented: $showBleUpcomingAlert) {
+                Button("Понятно", role: .cancel) { }
+            } message: {
+                Text("Бесконтактный вход по Bluetooth скоро появится в приложении банка RoPay.")
+            }
+            .onAppear(perform: onViewAppear)
+            .onDisappear { APIService.shared.stopTransactionNotifications() }
+    }
+    
     var body: some View {
-        if #available(iOS 18.0, *) {
-            nativeTabView
+        if #available(iOS 26.0, *) {
+            withCommonModifiers(ios26TabView)
+        } else if #available(iOS 18.0, *) {
+            withCommonModifiers(ios18TabView)
         } else {
             legacyTabView
         }
     }
     
-    // MARK: - iOS 18+ Native TabView with Liquid Glass
-    @available(iOS 18.0, *)
-    private var nativeTabView: some View {
+    // MARK: - iOS 26+ Native TabView: Liquid Glass + tabBarMinimizeBehavior
+    @available(iOS 26.0, *)
+    private var ios26TabView: some View {
         TabView(selection: $selectedTab) {
             Tab("Главная", systemImage: "house.fill", value: 0) {
                 homeView
@@ -79,34 +114,22 @@ struct DashboardView: View {
             }
         }
         .tabBarMinimizeBehavior(.onScrollDown)
-        .sheet(isPresented: $showTransferSheet) {
-            if let user = currentUser {
-                TransferView(currentUser: user, onTransferCompleted: { newBal in
-                    currentUser?.balance = newBal
-                    loadTransactions()
-                })
+    }
+    
+    // MARK: - iOS 18–25 Native TabView (без minimize behavior)
+    @available(iOS 18.0, *)
+    private var ios18TabView: some View {
+        TabView(selection: $selectedTab) {
+            Tab("Главная", systemImage: "house.fill", value: 0) {
+                homeView
+            }
+            Tab("История", systemImage: "clock.fill", value: 1) {
+                historyView
+            }
+            Tab("Настройки", systemImage: "gearshape.fill", value: 2) {
+                SettingsView(currentUser: $currentUser, onLogout: onLock, isEmbedded: true)
             }
         }
-        .sheet(isPresented: $showAtmSheet) {
-            if let user = currentUser {
-                BluetoothAtmView(currentUser: user)
-            }
-        }
-        .fullScreenCover(item: $selectedStatusForViewer) { initialStatus in
-            StoryViewer(
-                initialStatus: initialStatus,
-                statuses: sortedStatuses,
-                onStatusViewed: { viewedId in markStatusAsViewed(viewedId) },
-                onDismiss: { selectedStatusForViewer = nil }
-            )
-        }
-        .alert("Скоро будет доступно", isPresented: $showBleUpcomingAlert) {
-            Button("Понятно", role: .cancel) { }
-        } message: {
-            Text("Бесконтактный вход по Bluetooth скоро появится в приложении банка RoPay.")
-        }
-        .onAppear(perform: onViewAppear)
-        .onDisappear { APIService.shared.stopTransactionNotifications() }
     }
     
     // MARK: - iOS 16/17 Fallback TabView
