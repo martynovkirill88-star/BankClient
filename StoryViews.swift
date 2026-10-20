@@ -110,6 +110,13 @@ struct StoryViewer: View {
     @State private var isPaused: Bool = false
     @State private var player: AVPlayer? = nil
     
+    // Audio / Sound states
+    @State private var hasAudioTrack: Bool = false
+    @State private var isMuted: Bool = true
+    @State private var soundFeedbackText: String? = nil
+    @State private var soundFeedbackIcon: String? = nil
+    @State private var soundFeedbackWorkItem: DispatchWorkItem? = nil
+    
     // Timer interval (50ms ticks for smooth progress bar)
     private let timer = Timer.publish(every: 0.05, on: .main, in: .common).autoconnect()
     
@@ -186,9 +193,31 @@ struct StoryViewer: View {
                     }
                     .simultaneousGesture(
                         LongPressGesture(minimumDuration: 0.2)
-                            .onEnded { _ in isPaused = true }
+                            .onEnded { _ in
+                                isPaused = true
+                                player?.pause()
+                            }
                     )
                 )
+                
+                // Floating Sound Status Toast (Center of screen)
+                if let text = soundFeedbackText, let icon = soundFeedbackIcon {
+                    HStack(spacing: 8) {
+                        Image(systemName: icon)
+                            .font(.system(size: 15, weight: .bold))
+                        Text(text)
+                            .font(.system(size: 14, weight: .bold))
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Color.black.opacity(0.8))
+                    .clipShape(Capsule())
+                    .overlay(Capsule().stroke(Color.white.opacity(0.25), lineWidth: 1))
+                    .shadow(color: Color.black.opacity(0.4), radius: 10)
+                    .transition(.scale.combined(with: .opacity))
+                    .zIndex(50)
+                }
                 
                 // Top Overlay: Progress Bars + Header
                 VStack(spacing: 12) {
@@ -213,7 +242,7 @@ struct StoryViewer: View {
                     .padding(.horizontal, 16)
                     .padding(.top, 10)
                     
-                    // Header Bar (Avatar, Title, Date, Close Button)
+                    // Header Bar (Avatar, Title, Date, Sound Button, Close Button)
                     HStack(spacing: 12) {
                         ZStack {
                             Circle()
@@ -235,9 +264,29 @@ struct StoryViewer: View {
                         
                         Spacer()
                         
+                        // Sound Button: Automatically appears ONLY if video has audio track!
+                        if hasAudioTrack && status.media_type == "video" {
+                            Button(action: toggleMute) {
+                                ZStack {
+                                    Circle()
+                                        .fill(Color.black.opacity(0.55))
+                                        .frame(width: 36, height: 36)
+                                        .overlay(
+                                            Circle().stroke(Color.white.opacity(0.25), lineWidth: 1)
+                                        )
+                                    
+                                    Image(systemName: isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                                        .font(.system(size: 15, weight: .bold))
+                                        .foregroundColor(isMuted ? Color.white.opacity(0.9) : BankTheme.mint)
+                                }
+                            }
+                            .buttonStyle(ScaleTouchButtonStyle())
+                            .transition(.scale.combined(with: .opacity))
+                        }
+                        
                         Button(action: dismissViewer) {
                             Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 26))
+                                .font(.system(size: 28))
                                 .foregroundColor(Color.white.opacity(0.85))
                         }
                     }
@@ -269,6 +318,7 @@ struct StoryViewer: View {
         }
         .onDisappear {
             stopCurrentStory()
+            configureAudioSession(active: false)
         }
         .onReceive(timer) { _ in
             guard !isPaused, let status = currentStatus else { return }
@@ -288,20 +338,108 @@ struct StoryViewer: View {
     private func startCurrentStory() {
         guard let status = currentStatus else { return }
         progress = 0.0
+        hasAudioTrack = false
         onStatusViewed(status.id)
         
+        stopCurrentStory()
+        
         if status.media_type == "video", let url = URL(string: status.media_url) {
-            player = AVPlayer(url: url)
-            player?.play()
+            setupVideoPlayer(for: url)
+        }
+    }
+    
+    private func setupVideoPlayer(for url: URL) {
+        let asset = AVURLAsset(url: url)
+        let playerItem = AVPlayerItem(asset: asset)
+        let newPlayer = AVPlayer(playerItem: playerItem)
+        newPlayer.isMuted = isMuted
+        
+        if !isMuted {
+            configureAudioSession(active: true)
+            newPlayer.volume = 1.0
+        }
+        
+        self.player = newPlayer
+        newPlayer.play()
+        
+        // Asynchronously check if the video has an audio track
+        Task {
+            var soundFound = false
+            if #available(iOS 16.0, *) {
+                if let tracks = try? await asset.loadTracks(withMediaType: .audio) {
+                    soundFound = !tracks.isEmpty
+                }
+            } else {
+                soundFound = !asset.tracks(withMediaType: .audio).isEmpty
+            }
+            
+            await MainActor.run {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                    self.hasAudioTrack = soundFound
+                }
+            }
+        }
+        
+        NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemDidPlayToEndTime,
+            object: playerItem,
+            queue: .main
+        ) { _ in
+            self.nextStory()
+        }
+    }
+    
+    private func toggleMute() {
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            isMuted.toggle()
+        }
+        
+        if !isMuted {
+            configureAudioSession(active: true)
+            player?.isMuted = false
+            player?.volume = 1.0
+            showSoundFeedback("Звук включён", icon: "speaker.wave.2.fill")
         } else {
-            player?.pause()
-            player = nil
+            player?.isMuted = true
+            showSoundFeedback("Без звука", icon: "speaker.slash.fill")
+        }
+    }
+    
+    private func showSoundFeedback(_ text: String, icon: String) {
+        soundFeedbackWorkItem?.cancel()
+        withAnimation(.easeInOut(duration: 0.2)) {
+            soundFeedbackText = text
+            soundFeedbackIcon = icon
+        }
+        let work = DispatchWorkItem {
+            withAnimation(.easeInOut(duration: 0.25)) {
+                soundFeedbackText = nil
+                soundFeedbackIcon = nil
+            }
+        }
+        soundFeedbackWorkItem = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2, execute: work)
+    }
+    
+    private func configureAudioSession(active: Bool) {
+        do {
+            let session = AVAudioSession.sharedInstance()
+            if active {
+                try session.setCategory(.playback, mode: .moviePlayback, options: [.mixWithOthers])
+                try session.setActive(true)
+            } else {
+                try session.setActive(false, options: [.notifyOthersOnDeactivation])
+            }
+        } catch {
+            print("AudioSession error: \(error)")
         }
     }
     
     private func stopCurrentStory() {
         player?.pause()
         player = nil
+        NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: nil)
     }
     
     private func nextStory() {
@@ -326,6 +464,7 @@ struct StoryViewer: View {
     
     private func dismissViewer() {
         stopCurrentStory()
+        configureAudioSession(active: false)
         onDismiss()
     }
 }

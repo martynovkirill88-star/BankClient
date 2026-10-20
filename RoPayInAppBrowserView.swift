@@ -1,7 +1,7 @@
 import SwiftUI
 import WebKit
 
-// MARK: - In-App Mini-App Browser (WKWebView Wrapper)
+// MARK: - In-App Mini-App Browser (WKWebView Wrapper with Zoom & Pinch Prevention)
 struct InAppWebViewRepresentable: UIViewRepresentable {
     let url: URL
     let userAgent: String
@@ -19,30 +19,131 @@ struct InAppWebViewRepresentable: UIViewRepresentable {
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
         
+        // Inject script to enforce non-scalable viewport and disable double-tap / gesture zoom
+        let preventZoomScriptSource = """
+        (function() {
+            function enforceNativeLayout() {
+                var meta = document.querySelector('meta[name="viewport"]');
+                if (!meta) {
+                    meta = document.createElement('meta');
+                    meta.name = 'viewport';
+                    if (document.head) {
+                        document.head.appendChild(meta);
+                    }
+                }
+                if (meta) {
+                    meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, shrink-to-fit=no, viewport-fit=cover';
+                }
+                
+                var style = document.getElementById('ropay-native-app-style');
+                if (!style) {
+                    style = document.createElement('style');
+                    style.id = 'ropay-native-app-style';
+                    style.innerHTML = `
+                        html, body {
+                            touch-action: pan-x pan-y !important;
+                            -webkit-text-size-adjust: 100% !important;
+                            -webkit-user-select: none !important;
+                            user-select: none !important;
+                            -webkit-touch-callout: none !important;
+                        }
+                        input, textarea, select, [contenteditable="true"] {
+                            -webkit-user-select: auto !important;
+                            user-select: auto !important;
+                            font-size: 16px !important;
+                        }
+                    `;
+                    if (document.head) {
+                        document.head.appendChild(style);
+                    }
+                }
+            }
+            
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', enforceNativeLayout);
+            } else {
+                enforceNativeLayout();
+            }
+            
+            // Disable double-tap to zoom
+            var lastTouchTime = 0;
+            document.addEventListener('touchend', function(event) {
+                var currentTime = (new Date()).getTime();
+                var tapLength = currentTime - lastTouchTime;
+                if (tapLength < 350 && tapLength > 0) {
+                    event.preventDefault();
+                }
+                lastTouchTime = currentTime;
+            }, { passive: false });
+            
+            // Disable multi-touch gesture zoom
+            document.addEventListener('gesturestart', function(e) { e.preventDefault(); }, { passive: false });
+            document.addEventListener('gesturechange', function(e) { e.preventDefault(); }, { passive: false });
+            document.addEventListener('gestureend', function(e) { e.preventDefault(); }, { passive: false });
+        })();
+        """
+        
+        let userScript = WKUserScript(
+            source: preventZoomScriptSource,
+            injectionTime: .atDocumentEnd,
+            forMainFrameOnly: false
+        )
+        config.userContentController.addUserScript(userScript)
+        
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
         webView.customUserAgent = userAgent
         webView.backgroundColor = UIColor(red: 0.05, green: 0.06, blue: 0.09, alpha: 1.0)
         webView.isOpaque = false
+        
+        // Native ScrollView Zoom Lock
         webView.scrollView.backgroundColor = UIColor(red: 0.05, green: 0.06, blue: 0.09, alpha: 1.0)
+        webView.scrollView.minimumZoomScale = 1.0
+        webView.scrollView.maximumZoomScale = 1.0
+        webView.scrollView.bouncesZoom = false
+        webView.scrollView.pinchGestureRecognizer?.isEnabled = false
+        webView.scrollView.delegate = context.coordinator
+        
+        // Disable gesture recognizers
+        Self.disableZoomGestures(in: webView)
         
         context.coordinator.setupProgressObserver(webView: webView)
         
         var request = URLRequest(url: url)
         request.setValue("true", forHTTPHeaderField: "X-RoPay-App")
-        request.setValue("1.0.22", forHTTPHeaderField: "X-RoPay-Version")
+        request.setValue("1.0.23", forHTTPHeaderField: "X-RoPay-Version")
         webView.load(request)
         return webView
     }
     
     func updateUIView(_ webView: WKWebView, context: Context) {
+        Self.disableZoomGestures(in: webView)
         if reloadTrigger != context.coordinator.lastReloadTrigger {
             context.coordinator.lastReloadTrigger = reloadTrigger
             webView.reload()
         }
     }
     
-    class Coordinator: NSObject, WKNavigationDelegate {
+    static func disableZoomGestures(in view: UIView) {
+        if let scrollView = view as? UIScrollView {
+            scrollView.pinchGestureRecognizer?.isEnabled = false
+            scrollView.minimumZoomScale = 1.0
+            scrollView.maximumZoomScale = 1.0
+            scrollView.bouncesZoom = false
+        }
+        for gesture in view.gestureRecognizers ?? [] {
+            if gesture is UIPinchGestureRecognizer {
+                gesture.isEnabled = false
+            } else if let tap = gesture as? UITapGestureRecognizer, tap.numberOfTapsRequired == 2 {
+                tap.isEnabled = false
+            }
+        }
+        for subview in view.subviews {
+            disableZoomGestures(in: subview)
+        }
+    }
+    
+    class Coordinator: NSObject, WKNavigationDelegate, UIScrollViewDelegate {
         var parent: InAppWebViewRepresentable
         var lastReloadTrigger: Bool = false
         private var observation: NSKeyValueObservation?
@@ -61,7 +162,28 @@ struct InAppWebViewRepresentable: UIViewRepresentable {
             }
         }
         
+        // Completely forbid zoom at the UIScrollView level
+        func viewForZooming(in scrollView: UIScrollView) -> UIView? {
+            return nil
+        }
+        
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            InAppWebViewRepresentable.disableZoomGestures(in: webView)
+            
+            // Re-enforce viewport
+            let script = """
+            var meta = document.querySelector('meta[name="viewport"]');
+            if (!meta) {
+                meta = document.createElement('meta');
+                meta.name = 'viewport';
+                if (document.head) { document.head.appendChild(meta); }
+            }
+            if (meta) {
+                meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, shrink-to-fit=no, viewport-fit=cover';
+            }
+            """
+            webView.evaluateJavaScript(script, completionHandler: nil)
+            
             DispatchQueue.main.async {
                 self.parent.canGoBack = webView.canGoBack
                 self.parent.canGoForward = webView.canGoForward
@@ -159,7 +281,7 @@ struct RoPayInAppBrowserView: View {
                     // WKWebView Content
                     InAppWebViewRepresentable(
                         url: destinationURL,
-                        userAgent: "RoPayClientApp/1.0.22 (iPhone; iOS 26.0) RoPaySecureInAppBrowser",
+                        userAgent: "RoPayClientApp/1.0.23 (iPhone; iOS 26.0) RoPaySecureInAppBrowser",
                         estimatedProgress: $estimatedProgress,
                         canGoBack: $canGoBack,
                         canGoForward: $canGoForward,

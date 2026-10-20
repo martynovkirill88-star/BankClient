@@ -6,6 +6,8 @@ struct PinLockView: View {
     @Binding var showWelcomeScreen: Bool
     
     @AppStorage("bank_user_phone") private var savedPhone: String = ""
+    @AppStorage("bank_cached_pin") private var cachedPin: String = ""
+    @AppStorage("bank_cached_user_json") private var cachedUserJson: String = ""
     @State private var pinBuffer: String = ""
     @State private var isError: Bool = false
     @State private var isLoading: Bool = false
@@ -265,21 +267,55 @@ struct PinLockView: View {
             return
         }
         
+        let enteredPin = pinBuffer
+        
+        // 1. Instant offline unlock if cached PIN matches
+        if !cachedPin.isEmpty && cachedPin == enteredPin,
+           let data = cachedUserJson.data(using: .utf8),
+           let localUser = try? JSONDecoder().decode(User.self, from: data) {
+            await MainActor.run {
+                self.currentUser = localUser
+                self.showWelcomeScreen = true
+                self.pinBuffer = ""
+                self.isLoading = false
+            }
+            
+            // Background sync fresh data from server
+            Task {
+                if let freshUser = try? await APIService.shared.loginWithPin(phone: savedPhone, pin: enteredPin) {
+                    await MainActor.run {
+                        self.currentUser = freshUser
+                        if let encoded = try? JSONEncoder().encode(freshUser),
+                           let jsonStr = String(data: encoded, encoding: .utf8) {
+                            self.cachedUserJson = jsonStr
+                        }
+                    }
+                }
+            }
+            return
+        }
+        
         isLoading = true
         errorMessage = ""
         
         do {
-            let user = try await APIService.shared.loginWithPin(phone: savedPhone, pin: pinBuffer)
+            let user = try await APIService.shared.loginWithPin(phone: savedPhone, pin: enteredPin)
             await MainActor.run {
-                isLoading = false
-                currentUser = user
-                showWelcomeScreen = true
+                self.isLoading = false
+                self.cachedPin = enteredPin
+                if let encoded = try? JSONEncoder().encode(user),
+                   let jsonStr = String(data: encoded, encoding: .utf8) {
+                    self.cachedUserJson = jsonStr
+                }
+                self.currentUser = user
+                self.showWelcomeScreen = true
+                self.pinBuffer = ""
             }
         } catch {
             await MainActor.run {
-                isLoading = false
-                errorMessage = error.localizedDescription
-                shakePin()
+                self.isLoading = false
+                self.errorMessage = error.localizedDescription
+                self.shakePin()
             }
         }
     }
@@ -295,18 +331,29 @@ struct PinLockView: View {
                 DispatchQueue.main.async {
                     if success {
                         UINotificationFeedbackGenerator().notificationOccurred(.success)
-                        // If phone is saved, fetch latest real profile directly
+                        // If phone is saved, fetch or use cached profile
                         if !savedPhone.isEmpty {
+                            if let data = cachedUserJson.data(using: .utf8),
+                               let localUser = try? JSONDecoder().decode(User.self, from: data) {
+                                currentUser = localUser
+                                showWelcomeScreen = true
+                            }
                             Task {
                                 do {
                                     let user = try await APIService.shared.fetchUserByPhone(phone: savedPhone)
                                     await MainActor.run {
                                         currentUser = user
                                         showWelcomeScreen = true
+                                        if let encoded = try? JSONEncoder().encode(user),
+                                           let jsonStr = String(data: encoded, encoding: .utf8) {
+                                            cachedUserJson = jsonStr
+                                        }
                                     }
                                 } catch {
-                                    await MainActor.run {
-                                        errorMessage = "Не удалось загрузить профиль (\(error.localizedDescription))"
+                                    if currentUser == nil {
+                                        await MainActor.run {
+                                            errorMessage = "Не удалось загрузить профиль (\(error.localizedDescription))"
+                                        }
                                     }
                                 }
                             }
