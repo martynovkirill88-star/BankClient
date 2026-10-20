@@ -67,6 +67,20 @@ struct TerminalSession: Codable, Identifiable {
         self.created_at = try? container.decodeIfPresent(String.self, forKey: .created_at)
         self.paid_at = try? container.decodeIfPresent(String.self, forKey: .paid_at)
     }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(merchant_id, forKey: .merchant_id)
+        try container.encode(merchant_name, forKey: .merchant_name)
+        try container.encode(amount, forKey: .amount)
+        try container.encodeIfPresent(description, forKey: .description)
+        try container.encode(status, forKey: .status)
+        try container.encodeIfPresent(buyer_id, forKey: .buyer_id)
+        try container.encodeIfPresent(buyer_name, forKey: .buyer_name)
+        try container.encodeIfPresent(created_at, forKey: .created_at)
+        try container.encodeIfPresent(paid_at, forKey: .paid_at)
+    }
 }
 
 struct TerminalSessionResponse: Codable {
