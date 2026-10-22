@@ -3,6 +3,26 @@ import AudioToolbox
 import CoreImage
 import CoreImage.CIFilterBuiltins
 
+enum PaymentTarget: String, CaseIterable, Identifiable {
+    case thisDevice = "this"
+    case posTerminal = "pos"
+    
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .thisDevice: return "На этом iPhone"
+        case .posTerminal: return "Терминал RoPay"
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .thisDevice: return "iphone"
+        case .posTerminal: return "display"
+        }
+    }
+}
+
 // MARK: - POS Terminal View for Business Profiles
 struct MerchantTerminalView: View {
     @Environment(\.dismiss) private var dismiss
@@ -11,6 +31,7 @@ struct MerchantTerminalView: View {
     
     @StateObject private var tapManager = TapPaymentManager.shared
     
+    @State private var paymentTarget: PaymentTarget = .thisDevice
     @State private var amountString: String = "0"
     @State private var description: String = ""
     @State private var isCreatingSession: Bool = false
@@ -44,8 +65,13 @@ struct MerchantTerminalView: View {
                     successReceiptView
                         .transition(.identity)
                 } else if let session = currentSession {
-                    waitingForCustomerTouchView(session: session)
-                        .transition(.identity)
+                    if paymentTarget == .thisDevice {
+                        waitingForCustomerTouchView(session: session)
+                            .transition(.identity)
+                    } else {
+                        waitingOnPosTerminalView(session: session)
+                            .transition(.identity)
+                    }
                 } else {
                     keypadInputView
                         .transition(.identity)
@@ -56,14 +82,14 @@ struct MerchantTerminalView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(currentSession == nil ? "Закрыть" : "Отмена") {
-                        tapManager.stopMerchantTerminal()
+                        cancelActiveSession()
                         dismiss()
                     }
                     .foregroundColor(BankTheme.mint)
                 }
             }
             .onDisappear {
-                tapManager.stopMerchantTerminal()
+                cancelActiveSession()
             }
             .onReceive(pollTimer) { _ in
                 guard let session = currentSession, !isPaidSuccess else { return }
@@ -190,24 +216,31 @@ struct MerchantTerminalView: View {
             
             Spacer()
             
+            // Payment Target Selector Pill
+            HStack(spacing: 8) {
+                targetButton(.thisDevice)
+                targetButton(.posTerminal)
+            }
+            .padding(.horizontal, 20)
+            
             // Submit Button
             Button(action: startTerminalSession) {
                 HStack(spacing: 10) {
                     if isCreatingSession {
                         ProgressView().tint(.black)
                     } else {
-                        Image(systemName: "iphone.radiowaves.left.and.right")
+                        Image(systemName: paymentTarget == .thisDevice ? "iphone.radiowaves.left.and.right" : "display.and.arrow.down")
                             .font(.system(size: 18, weight: .bold))
-                        Text("Принять оплату касанием")
+                        Text(paymentTarget == .thisDevice ? "Принять оплату касанием" : "Отправить на терминал RoPay")
                             .font(.system(size: 16, weight: .bold))
                     }
                 }
                 .foregroundColor(.black)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
-                .background(enteredAmount > 0 ? BankTheme.mint : Color.gray.opacity(0.4))
+                .background(enteredAmount > 0 ? (paymentTarget == .thisDevice ? BankTheme.mint : BankTheme.gold) : Color.gray.opacity(0.4))
                 .cornerRadius(18)
-                .shadow(color: enteredAmount > 0 ? BankTheme.mint.opacity(0.3) : .clear, radius: 10, y: 4)
+                .shadow(color: enteredAmount > 0 ? (paymentTarget == .thisDevice ? BankTheme.mint.opacity(0.3) : BankTheme.gold.opacity(0.3)) : .clear, radius: 10, y: 4)
             }
             .disabled(enteredAmount <= 0 || isCreatingSession)
             .padding(.horizontal, 20)
@@ -313,10 +346,7 @@ struct MerchantTerminalView: View {
                 .padding(.vertical, 6)
                 
                 // Cancel button
-                Button(action: {
-                    tapManager.stopMerchantTerminal()
-                    currentSession = nil
-                }) {
+                Button(action: cancelActiveSession) {
                     Text("Отменить сессию")
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(BankTheme.textMuted)
@@ -331,6 +361,95 @@ struct MerchantTerminalView: View {
                 .padding(.bottom, 24)
             }
             .frame(maxWidth: .infinity)
+        }
+    }
+    
+    // MARK: - Screen 2b: Waiting on RoPay POS Terminal (iPhone 5)
+    private func waitingOnPosTerminalView(session: TerminalSession) -> some View {
+        VStack(spacing: 24) {
+            Spacer()
+            
+            // Header Amount & Business Name
+            VStack(spacing: 4) {
+                Text(displayBusinessName)
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundColor(BankTheme.gold)
+                
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text("\(Int(session.amount))")
+                        .font(.system(size: 46, weight: .black, design: .rounded))
+                        .foregroundColor(.white)
+                    Text("₽")
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(BankTheme.mint)
+                }
+            }
+            .padding(.top, 10)
+            
+            // Animated Pulse Radar with Terminal Display Icon
+            ZStack(alignment: .center) {
+                PulseRippleCircle(size: 160, delay: 0.5, gradientColors: [BankTheme.gold.opacity(0.7), BankTheme.mint.opacity(0.35)])
+                PulseRippleCircle(size: 125, delay: 0.25, gradientColors: [BankTheme.gold.opacity(0.7), BankTheme.mint.opacity(0.35)])
+                PulseRippleCircle(size: 92, delay: 0.0, gradientColors: [BankTheme.gold.opacity(0.7), BankTheme.mint.opacity(0.35)])
+                
+                ZStack {
+                    Circle()
+                        .fill(BankTheme.bgCard)
+                        .frame(width: 78, height: 78)
+                        .overlay(Circle().stroke(BankTheme.gold, lineWidth: 2))
+                        .shadow(color: BankTheme.gold.opacity(0.4), radius: 15)
+                    
+                    VStack(spacing: 3) {
+                        Image(systemName: "display")
+                            .font(.system(size: 26, weight: .bold))
+                            .foregroundColor(BankTheme.gold)
+                        
+                        Text("ТЕРМИНАЛ")
+                            .font(.system(size: 8, weight: .black))
+                            .foregroundColor(BankTheme.gold)
+                    }
+                }
+            }
+            .frame(width: 165, height: 165, alignment: .center)
+            
+            // Status Info Card
+            VStack(spacing: 12) {
+                HStack(spacing: 8) {
+                    Circle()
+                        .fill(Color.green)
+                        .frame(width: 8, height: 8)
+                    Text("Счёт отправлен на терминал")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.white)
+                }
+                
+                Text("Сумма \(Int(session.amount)) ₽ выведена на терминал покупателя (iPhone 5).\nОжидаем оплату касанием телефона или по QR-коду.")
+                    .font(.system(size: 13))
+                    .foregroundColor(BankTheme.textMuted)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 20)
+            }
+            .padding(18)
+            .background(BankTheme.bgCard)
+            .cornerRadius(18)
+            .overlay(RoundedRectangle(cornerRadius: 18).stroke(BankTheme.border, lineWidth: 1))
+            .padding(.horizontal, 24)
+            
+            Spacer()
+            
+            // Cancel Button
+            Button(action: cancelActiveSession) {
+                Text("Отменить счёт на терминале")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(BankTheme.coral)
+                    .padding(.vertical, 14)
+                    .frame(maxWidth: .infinity)
+                    .background(BankTheme.coral.opacity(0.12))
+                    .cornerRadius(16)
+                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(BankTheme.coral.opacity(0.3), lineWidth: 1))
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 24)
         }
     }
     
@@ -419,6 +538,32 @@ struct MerchantTerminalView: View {
         }
     }
     
+    private func targetButton(_ target: PaymentTarget) -> some View {
+        Button(action: {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+                paymentTarget = target
+            }
+        }) {
+            HStack(spacing: 6) {
+                Image(systemName: target.icon)
+                    .font(.system(size: 13, weight: .bold))
+                Text(target.title)
+                    .font(.system(size: 13, weight: .bold))
+            }
+            .foregroundColor(paymentTarget == target ? .black : BankTheme.textMuted)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10)
+            .background(paymentTarget == target ? (target == .thisDevice ? BankTheme.mint : BankTheme.gold) : BankTheme.bgCard)
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(paymentTarget == target ? (target == .thisDevice ? BankTheme.mint : BankTheme.gold) : BankTheme.border, lineWidth: 1)
+            )
+        }
+        .buttonStyle(ScaleTouchButtonStyle())
+    }
+    
     private func startTerminalSession() {
         guard enteredAmount > 0 else { return }
         isCreatingSession = true
@@ -434,7 +579,11 @@ struct MerchantTerminalView: View {
                 await MainActor.run {
                     self.currentSession = session
                     self.isCreatingSession = false
-                    self.tapManager.startMerchantTerminal(session: session)
+                    
+                    // Only start local Bluetooth broadcast if merchant accepts on this phone
+                    if self.paymentTarget == .thisDevice {
+                        self.tapManager.startMerchantTerminal(session: session)
+                    }
                 }
             } catch {
                 await MainActor.run {
@@ -443,6 +592,17 @@ struct MerchantTerminalView: View {
                 }
             }
         }
+    }
+    
+    private func cancelActiveSession() {
+        tapManager.stopMerchantTerminal()
+        if let session = currentSession {
+            let sid = session.id
+            Task {
+                try? await APIService.shared.cancelTerminalSession(sessionId: sid)
+            }
+        }
+        currentSession = nil
     }
 }
 

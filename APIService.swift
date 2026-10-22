@@ -188,6 +188,20 @@ class APIService: ObservableObject {
         return s
     }
     
+    func cancelTerminalSession(sessionId: String) async throws {
+        guard let url = URL(string: "\(cleanBaseURL)/api/terminal/cancel") else {
+            throw URLError(.badURL)
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: ["session_id": sessionId])
+        let (_, response) = try await URLSession.shared.data(for: request)
+        guard let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
+    }
+    
     func payTerminalSession(sessionId: String, buyerId: Int) async throws -> (TerminalSession, Double) {
         guard let url = URL(string: "\(cleanBaseURL)/api/terminal/pay") else {
             throw URLError(.badURL)
